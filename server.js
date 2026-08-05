@@ -17,6 +17,11 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// The guide lives at the repo root, because that's the file GitHub Pages
+// publishes. Keep serving it from inside the app too, so the ? button works
+// with the network unplugged and there's only ever one copy of it.
+app.get('/guide.html', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
 // Pull the first JSON object/array out of a model response, tolerating stray
 // prose or code fences that small local models sometimes add.
 function parseJsonLoose(text) {

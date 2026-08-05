@@ -75,8 +75,11 @@ There's a full illustrated guide — how the interview works, how the memory eng
 your book straight, how to control the model's creativity, how to set up Ollama and pick
 a model, and how to write from your phone.
 
-- **Online:** published to GitHub Pages from `public/guide.html`
+- **Online:** <https://joshuaopel.github.io/inkwell/>
 - **Offline:** click the **?** in Inkwell's top bar (`http://localhost:4321/guide.html`)
+
+It lives at [`index.html`](index.html) in the repo root — one file, which is both
+the published site and the page the app serves.
 
 It ships inside the app and uses no webfonts or CDNs, so like everything else here it
 works with the network unplugged.
