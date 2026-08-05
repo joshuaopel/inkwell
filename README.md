@@ -56,6 +56,14 @@ Built as a smarter, personal alternative to Sudowrite. The difference is the
 - **Everything is a file** — each book is a folder of Markdown + JSON on disk.
   Portable, backup-able, git-able.
 
+## The guide
+
+There's a full illustrated guide bundled with the app — how the interview works, how to
+control the model's creativity, how to set up Ollama and pick a model, and how to read
+from your phone. Open **[`public/guide.html`](public/guide.html)** in a browser, or click
+the **?** in Inkwell's top bar while it's running (`http://localhost:4321/guide.html`).
+Like everything else here, it works with the network unplugged.
+
 ## Screenshots
 
 The outline as a draggable, act-coloured node map, with a live interview panel and memory snapshot:

@@ -112,6 +112,12 @@ body {
 }
 .iconbtn:hover { background: #1c202b; color: var(--ink); }
 .iconbtn.sm { width: 22px; height: 22px; font-size: 13px; }
+/* The guide is a plain link, so it needs the icon-button shape drawn on. */
+a.guidebtn {
+  display: grid; place-items: center; text-decoration: none;
+  font-weight: 700; font-size: 14px; flex: 0 0 auto;
+}
+a.guidebtn:hover { color: var(--gold); }
 .chipbtn {
   background: #171a24; border: 1px solid var(--line); color: var(--ink-dim);
   border-radius: 7px; padding: 4px 9px; font-size: 11px; cursor: pointer;
