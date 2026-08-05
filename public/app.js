@@ -131,7 +131,7 @@ async function refreshProvider() {
       ? `Ollama connected (${h.host})`
       : anyCloud ? `Ollama not running — cloud (${h.cloud.service}) is available`
         : `Ollama not reachable at ${h.host}`;
-    if (!h.ollama && !anyCloud) toast('Ollama not running — start it, then reload.', 'err');
+    if (!h.ollama && !anyCloud) toast(h.reason || 'Ollama not running — start it, then reload.', 'err');
   } catch {}
   try {
     const { models, errors } = await api('/models');
@@ -243,7 +243,8 @@ async function renderConn() {
     $('connInfo').innerHTML = `Host <b>${esc(h.host)}</b><br>
       Status <span class="${h.ollama ? 'ok' : 'bad'}">${h.ollama ? '● connected' : '● not reachable'}</span><br>
       Models installed <b>${local}</b>` +
-      (h.ollama ? '' : `<br><span class="submeta">Start Ollama, then hit refresh. Nothing here costs anything.</span>`);
+      // Say what actually failed rather than making them go and find out.
+      (h.ollama ? '' : `<br><span class="submeta">${esc(h.reason || 'Start Ollama, then hit refresh.')}</span>`);
     if (h.cloud?.enabled) {
       $('cloudHint').innerHTML = h.cloud.ok
         ? `<span class="ok">● key accepted</span> — cloud models appear in the picker under “Cloud”.`
