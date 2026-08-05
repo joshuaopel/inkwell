@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inkwell — your local AI writing studio</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖋️</text></svg>" />
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ========== ICON RAIL ========== -->
+  <nav class="rail">
+    <div class="rail-logo" title="Inkwell">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 3c-6 1-11 5-13 11l-2 5 5-2c6-2 9-7 10-13z"/><path d="M5 19c3-4 6-7 10-9"/>
+      </svg>
+    </div>
+    <button class="railbtn" data-nav="home"><svg viewBox="0 0 24 24"><path d="M3 10l9-7 9 7v10a1 1 0 01-1 1h-5v-7H9v7H4a1 1 0 01-1-1z"/></svg><span>Home</span></button>
+    <button class="railbtn" data-nav="outline"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.6"/><circle cx="18" cy="12" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8.6 7.4l6.8 3.4M8.6 16.6l6.8-3.4"/></svg><span>Outline</span></button>
+    <button class="railbtn" data-nav="notes"><svg viewBox="0 0 24 24"><path d="M5 3h9l5 5v13H5z"/><path d="M14 3v5h5M8 13h8M8 17h6"/></svg><span>Notes</span></button>
+    <button class="railbtn" data-nav="bible"><svg viewBox="0 0 24 24"><path d="M4 4h7a2 2 0 012 2v14a2 2 0 00-2-2H4z"/><path d="M20 4h-7a2 2 0 00-2 2v14a2 2 0 012-2h7z"/></svg><span>Bible</span></button>
+    <button class="railbtn" data-nav="cards"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1.4"/><rect x="13" y="4" width="8" height="7" rx="1.4"/><rect x="3" y="13" width="8" height="7" rx="1.4"/><rect x="13" y="13" width="8" height="7" rx="1.4"/></svg><span>Cards</span></button>
+    <button class="railbtn" data-nav="export"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 19h16"/></svg><span>Export</span></button>
+  </nav>
+
+  <div class="stack">
+
+    <!-- ========== TOP BAR ========== -->
+    <header class="topbar">
+      <div class="brand">Inkwell</div>
+      <input id="bookTitleInput" class="booktitle" placeholder="Untitled" hidden />
+      <div class="seg" id="seg" hidden>
+        <button data-seg="outline">Plan</button>
+        <button data-seg="write">Write</button>
+        <button data-seg="bible">Bible</button>
+      </div>
+      <div class="spacer"></div>
+      <div class="modelpill"><span class="health" id="health">●</span><select id="modelSelect"></select></div>
+      <button class="btn ghost" id="exportBtn" hidden>Export EPUB</button>
+      <button class="iconbtn" id="settingsBtn" title="Settings">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1A1.7 1.7 0 008.9 19a1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1A1.7 1.7 0 004.6 8.9a1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+      </button>
+    </header>
+
+    <!-- ========== WORKSPACE ========== -->
+    <div class="workspace" id="workspace">
+
+      <!-- ---------- SIDEBAR ---------- -->
+      <aside class="sidebar" id="sidebar">
+        <button class="btn primary block" id="newBookBtn">＋ New book</button>
+
+        <div class="side-label">Your books</div>
+        <div id="bookList" class="booklist"></div>
+
+        <div class="side-head">
+          <span class="side-label">Chapters</span>
+          <button class="iconbtn sm" id="addChapterBtn" title="Add chapter">＋</button>
+        </div>
+        <div id="chapterList" class="chapterlist"></div>
+        <button class="addlink" id="addChapterLink">＋ Add chapter</button>
+
+        <div class="quotecard" id="quoteCard" hidden>
+          <svg class="quill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M20 3c-6 1-11 5-13 11l-2 5 5-2c6-2 9-7 10-13z"/><path d="M5 19c3-4 6-7 10-9"/></svg>
+          <blockquote id="quoteText"></blockquote>
+          <cite id="quoteAttr"></cite>
+        </div>
+      </aside>
+
+      <!-- ---------- CANVAS ---------- -->
+      <main class="canvas" id="canvas">
+
+        <!-- LIBRARY -->
+        <section class="view" id="view-home" hidden>
+          <div class="pane">
+            <div class="pane-head"><h1>Your books</h1></div>
+            <div class="libgrid">
+              <div id="libList" class="libcards"></div>
+              <div class="card newbook">
+                <h2>Start a new book</h2>
+                <label>Working title<input id="nb-title" placeholder="e.g. The Cartographer's Debt" /></label>
+                <label>Author name<input id="nb-author" placeholder="Your pen name" /></label>
+                <label>Genre<input id="nb-genre" placeholder="e.g. literary mystery, cozy fantasy" /></label>
+                <label>Premise — the seed of your story
+                  <textarea id="nb-premise" rows="3" placeholder="A disgraced mapmaker discovers the maps she forges are quietly rewriting the real world…"></textarea>
+                </label>
+                <div class="row">
+                  <label class="half">Point of view
+                    <select id="nb-pov"><option>Third person limited</option><option>Third person omniscient</option><option>First person</option><option>Second person</option></select>
+                  </label>
+                  <label class="half">Tense<select id="nb-tense"><option>Past</option><option>Present</option></select></label>
+                </div>
+                <button class="btn primary block" id="createBookBtn">Create &amp; start planning →</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- OUTLINE -->
+        <section class="view" id="view-outline" hidden>
+          <div class="pane">
+            <div class="pane-head">
+              <div>
+                <h1>Outline</h1>
+                <div class="submeta" id="outlineMeta">No chapters yet</div>
+              </div>
+              <div class="head-actions">
+                <div class="seg small" id="mapSeg">
+                  <button data-map="map" class="on">◇ Map view</button>
+                  <button data-map="list">☰ List view</button>
+                </div>
+                <button class="btn notes" id="refineBtn" hidden>✎ Refine structure</button>
+                <button class="btn gold-ghost" id="rebuildBtn" hidden>↻ Rebuild from interview</button>
+                <button class="btn gold-ghost" id="autoArrangeBtn">✦ Auto-arrange</button>
+              </div>
+            </div>
+
+            <div class="syncbar" id="syncBar" hidden></div>
+
+            <div class="actbar" id="actBar"></div>
+
+            <div class="mapwrap" id="mapWrap">
+              <svg class="wires" id="wires"></svg>
+              <div class="nodes" id="nodes"></div>
+            </div>
+
+            <div class="listwrap" id="listWrap" hidden></div>
+
+            <div class="emptyOutline" id="emptyOutline" hidden>
+              <h2>No outline yet</h2>
+              <p>Answer a few questions in the interview panel, then build the spine of your book.</p>
+              <button class="btn primary" id="buildOutlineBtn">Build outline &amp; bible →</button>
+              <div class="planerr" id="outlineErr" hidden></div>
+            </div>
+
+            <div class="stats" id="stats"></div>
+          </div>
+        </section>
+
+        <!-- WRITE -->
+        <section class="view write" id="view-write" hidden>
+          <div class="editor-col">
+            <div class="chapter-meta">
+              <input id="ed-chapter-title" class="chapter-title-input" placeholder="Chapter title" />
+              <div class="chapter-summary" id="ed-chapter-summary"></div>
+            </div>
+            <textarea id="editor" class="editor" spellcheck="true" placeholder="Start writing, or ask Inkwell to continue…"></textarea>
+            <div class="editor-foot">
+              <span id="wordcount">0 words</span><span id="saveState"></span>
+            </div>
+          </div>
+          <aside class="aipanel">
+            <div class="ai-actions">
+              <div class="selinfo" id="selInfo">Select a passage to revise it</div>
+              <button class="btn primary block" data-action="continue">✍️ Continue writing</button>
+              <button class="btn notes block" id="reviseBtn">📝 Revise with notes…</button>
+              <div class="row">
+                <button class="btn ghost half" data-action="rewrite">Quick rewrite</button>
+                <button class="btn ghost half" data-action="expand">Expand</button>
+              </div>
+              <button class="btn ghost block" data-action="describe">Describe / set the scene</button>
+              <input id="ai-instruction" class="instruction" placeholder="Optional direction (e.g. 'raise the tension')" />
+            </div>
+            <div class="notes-composer" id="notesComposer" hidden>
+              <div class="nc-head"><span id="nc-title">Your notes on this passage</span><button class="iconbtn sm" id="nc-close">✕</button></div>
+              <div class="nc-excerpt" id="nc-excerpt"></div>
+              <div class="nc-chips" id="nc-chips"></div>
+              <textarea id="nc-notes" rows="5" placeholder="What should change?&#10;&#10;e.g. Too much exposition — cut the backstory. Her anger should be cold, not loud."></textarea>
+              <button class="btn primary block" id="nc-run">Revise this passage →</button>
+            </div>
+            <div class="suggestion" id="suggestion" hidden>
+              <div class="sug-head"><span id="sug-label">Suggestion</span><button class="iconbtn sm" id="sug-close">✕</button></div>
+              <div class="sug-body" id="sug-body"></div>
+              <div class="sug-actions">
+                <button class="btn primary" id="sug-accept">Accept</button>
+                <button class="btn notes" id="sug-again" hidden>More notes ↻</button>
+                <button class="btn ghost" id="sug-retry">Retry</button>
+                <button class="btn ghost" id="sug-reject">Discard</button>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <!-- BIBLE -->
+        <section class="view" id="view-bible" hidden>
+          <div class="pane narrow">
+            <div class="pane-head"><div><h1>Story bible</h1><div class="submeta">The single source of truth. Every generation is checked against this.</div></div></div>
+            <section class="bible-section">
+              <div class="bible-head"><h3>Characters</h3><button class="iconbtn sm" data-add="characters">＋</button></div>
+              <div id="charList" class="entrylist"></div>
+            </section>
+            <section class="bible-section">
+              <div class="bible-head"><h3>Locations</h3><button class="iconbtn sm" data-add="locations">＋</button></div>
+              <div id="locList" class="entrylist"></div>
+            </section>
+            <section class="bible-section">
+              <label>Themes (comma-separated)<input id="bi-themes" /></label>
+              <label>Tone<input id="bi-tone" placeholder="Cold rain on paper. Precise, restrained, faintly cruel." /></label>
+              <label>Style guide — the voice to hold<textarea id="bi-style" rows="2"></textarea></label>
+              <label>Story so far (running summary)<textarea id="bi-summary" rows="5"></textarea></label>
+            </section>
+            <button class="btn primary" id="saveBibleBtn">Save bible</button>
+          </div>
+        </section>
+
+        <!-- NOTES -->
+        <section class="view" id="view-notes" hidden>
+          <div class="pane narrow">
+            <div class="pane-head"><div><h1>Notes</h1><div class="submeta">Scratch space. Never sent to the model unless you paste it.</div></div><span class="submeta" id="notesSaved"></span></div>
+            <textarea id="notesPad" class="notespad" placeholder="Ideas, research, fragments, things to fix…"></textarea>
+          </div>
+        </section>
+
+        <!-- CARDS -->
+        <section class="view" id="view-cards" hidden>
+          <div class="pane">
+            <div class="pane-head"><div><h1>Cards</h1><div class="submeta">Every chapter as an index card. Click one to write it.</div></div></div>
+            <div class="cardgrid" id="cardGrid"></div>
+          </div>
+        </section>
+
+        <!-- EXPORT -->
+        <section class="view" id="view-export" hidden>
+          <div class="pane narrow">
+            <div class="pane-head"><div><h1>Export</h1><div class="submeta">Ready for Kindle Direct Publishing.</div></div></div>
+            <div class="card">
+              <div class="exportrow"><div><h3>EPUB</h3><p class="submeta">Reflowable ebook with title page, table of contents and scene breaks. Upload straight to KDP.</p></div><button class="btn primary" id="exportEpubBtn">Download .epub</button></div>
+            </div>
+            <div class="exportstats" id="exportStats"></div>
+          </div>
+        </section>
+      </main>
+
+      <!-- ---------- CONTEXT PANEL ---------- -->
+      <aside class="context" id="context">
+        <div class="ctxcard">
+          <div class="ctxhead"><h3>Interview / Prompts</h3><button class="chipbtn" id="resumeBtn">▤ Resume</button></div>
+          <div class="transcript" id="transcript"></div>
+
+          <div class="answerbox" id="answerBox" hidden>
+            <textarea id="answerInput" rows="3" placeholder="Your answer…"></textarea>
+            <button class="btn primary block" id="answerSend">Answer →</button>
+          </div>
+
+          <div class="suggestq" id="suggestQ" hidden>
+            <div class="sq-label">Suggested next question</div>
+            <div class="sq-card">
+              <div class="sq-text" id="sqText"></div>
+              <div class="sq-actions">
+                <button class="btn gold-ghost sm" id="askThisBtn">Ask this</button>
+                <button class="linkbtn" id="skipQBtn">Skip</button>
+              </div>
+            </div>
+          </div>
+          <button class="btn ghost block" id="startInterviewBtn">Start the interview</button>
+          <div class="planerr" id="interviewErr" hidden></div>
+        </div>
+
+        <div class="ctxcard">
+          <div class="ctxhead tight"><span class="side-label">Memory snapshot</span><span class="submeta" id="memWhen">—</span></div>
+          <div class="memlist" id="memList"></div>
+        </div>
+
+        <div class="ctxcard">
+          <div class="ctxhead"><h3>Story bible</h3><button class="chipbtn" id="openBibleBtn">Open</button></div>
+          <div class="biblepeek" id="biblePeek"></div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+</div>
+
+<!-- ========== REFINE STRUCTURE ========== -->
+<div class="modal-back" id="refineModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="refineTitle">
+    <div class="modal-head">
+      <h2 id="refineTitle">Refine structure</h2>
+      <button class="iconbtn" id="refineClose" title="Close">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- STEP 1 — compose the critique -->
+      <section class="setsec" id="refineCompose">
+        <p class="sethint">Critique the outline's order, pacing, or length. The AI revises the structure to match — and keeps the story (and any chapters you've written) intact. <span id="refineCurrent" class="refine-current"></span></p>
+        <div class="nc-chips" id="refineChips"></div>
+        <textarea id="refineNotes" rows="6" placeholder="e.g.
+• The middle act is rushed — split it into more chapters.
+• Move the news-article discovery earlier, to chapter 2.
+• Add a quiet chapter after the confrontation to breathe.
+• Aim for ~18 chapters with more rising action before the climax."></textarea>
+        <label class="setrow" style="margin-top:12px">Target chapter count <em style="color:var(--ink-faint)">(optional)</em>
+          <input type="number" id="refineTarget" min="4" max="60" placeholder="auto" style="width:110px" />
+        </label>
+      </section>
+
+      <!-- STEP 2 — review the proposed structure -->
+      <section id="refinePreview" hidden>
+        <p class="sethint" id="refineSummary"></p>
+        <div class="refine-diff">
+          <div class="rd-col">
+            <h4>Current <span id="rdOldCount"></span></h4>
+            <div class="rd-list" id="refineOld"></div>
+          </div>
+          <div class="rd-col">
+            <h4>Proposed <span id="rdNewCount"></span></h4>
+            <div class="rd-list" id="refineNew"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-foot">
+      <button class="linkbtn" id="refineBack" hidden>← Edit notes</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" id="refineCancel">Cancel</button>
+      <button class="btn primary" id="refineRun">Refine structure →</button>
+      <button class="btn primary" id="refineAccept" hidden>Accept new structure</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SETTINGS ========== -->
+<div class="modal-back" id="settingsModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <div class="modal-head">
+      <h2 id="setTitle">Settings</h2>
+      <button class="iconbtn" id="setClose" title="Close">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <section class="setsec">
+        <h3>Model &amp; generation</h3>
+        <p class="sethint">How the model behaves when it writes. Higher temperature is more inventive and less predictable.</p>
+        <label class="setrow">Default model
+          <select id="set-model"></select>
+        </label>
+        <div class="setrow slider"><span>Temperature</span><input type="range" id="set-temp" min="0" max="1.5" step="0.05"><output id="out-temp"></output></div>
+        <div class="setrow slider"><span>Top-p</span><input type="range" id="set-topp" min="0.1" max="1" step="0.05"><output id="out-topp"></output></div>
+        <div class="setrow slider"><span>Repeat penalty</span><input type="range" id="set-rep" min="1" max="1.5" step="0.02"><output id="out-rep"></output></div>
+        <div class="setrow slider"><span>Context window <em>(tokens)</em></span><input type="range" id="set-ctx" min="2048" max="32768" step="1024"><output id="out-ctx"></output></div>
+        <div class="setrow slider"><span>Response length <em>(tokens)</em></span><input type="range" id="set-pred" min="200" max="2000" step="50"><output id="out-pred"></output></div>
+      </section>
+
+      <section class="setsec">
+        <h3>What the model is told</h3>
+        <p class="sethint">Trim these if generations feel slow — everything here is sent on every request.</p>
+        <div class="setrow slider"><span>Surrounding prose <em>(words)</em></span><input type="range" id="set-local" min="100" max="1200" step="50"><output id="out-local"></output></div>
+        <label class="setcheck"><input type="checkbox" id="set-bible"> Send the story bible (characters, locations, lore)</label>
+        <label class="setcheck"><input type="checkbox" id="set-summary"> Send the running “story so far” summary</label>
+      </section>
+
+      <section class="setsec">
+        <h3>Editor</h3>
+        <div class="setrow slider"><span>Font size</span><input type="range" id="set-fs" min="14" max="26" step="1"><output id="out-fs"></output></div>
+        <div class="setrow slider"><span>Line height</span><input type="range" id="set-lh" min="1.3" max="2.2" step="0.02"><output id="out-lh"></output></div>
+        <div class="setrow slider"><span>Line width <em>(characters)</em></span><input type="range" id="set-measure" min="45" max="110" step="1"><output id="out-measure"></output></div>
+        <label class="setcheck"><input type="checkbox" id="set-spell"> Spellcheck while writing</label>
+      </section>
+
+      <section class="setsec">
+        <h3>Connection</h3>
+        <div class="conn" id="connInfo"></div>
+        <button class="btn ghost sm" id="set-refresh">Refresh models</button>
+      </section>
+    </div>
+
+    <div class="modal-foot">
+      <button class="linkbtn" id="setReset">Reset to defaults</button>
+      <div class="spacer"></div>
+      <button class="btn ghost" id="setCancel">Cancel</button>
+      <button class="btn primary" id="setSave">Save settings</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

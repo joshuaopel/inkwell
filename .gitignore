@@ -1,0 +1,16 @@
+# dependencies
+node_modules/
+
+# your work — manuscripts stay on your machine, never in git
+books/
+
+# personal, machine-specific runtime config (the app regenerates it)
+settings.json
+
+# local working files (audio, scratch images) — not part of the app
+Video/
+promo/Capture.PNG
+
+# os / logs
+.DS_Store
+*.log
