@@ -1,5 +1,7 @@
 // Inkwell frontend. Vanilla ES modules — no build step, works offline.
 
+import { initPageView, renderPages, syncPageView } from './pageview.js';
+
 // ---------- helpers ----------
 const $ = (id) => document.getElementById(id);
 const els = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -95,6 +97,15 @@ async function boot() {
   });
   wire();
   await loadSettings();
+  await initPageView({
+    api,
+    toast,
+    book: () => state.book,
+    chapterId: () => state.chapterId,
+    setChapter: (id) => { state.chapterId = id; renderChapterRail(); },
+    model: () => state.model,
+    view: () => state.view,
+  });
   await refreshProvider();
   await loadLibrary();
   const last = localStorage.getItem('inkwell.lastBook');
@@ -228,6 +239,11 @@ function go(view) {
   $('seg').hidden = !hasBook;
   $('bookTitleInput').hidden = !hasBook;
   $('exportBtn').hidden = !hasBook;
+  // Mobile chrome: the interview drawer only exists on the outline, and the AI
+  // panel only on the writing view.
+  $('ctxBtn').hidden = !hasBook || view !== 'outline';
+  $('aiFab').hidden = !hasBook || view !== 'write';
+  closeDrawers();
 
   if (view === 'home') renderLibrary();
   if (view === 'outline') renderOutline();
@@ -235,7 +251,29 @@ function go(view) {
   if (view === 'bible') renderBible();
   if (view === 'notes') $('notesPad').value = state.book?.notes || '';
   if (view === 'cards') renderCards();
+  if (view === 'pages') renderPages({ rebuild: true });
   if (view === 'export') renderExport();
+}
+
+// ---------- mobile drawers ----------
+// On a phone the sidebar, the interview panel and the AI panel slide in over
+// the canvas instead of sitting beside it.
+function openDrawer(which) {
+  const el = $(which);
+  const already = el.classList.contains('open');
+  closeDrawers();
+  if (already) return;
+  el.hidden = false;
+  el.classList.add('open');
+  document.body.classList.add('drawered');
+  $('scrim').hidden = false;
+}
+
+function closeDrawers() {
+  ['sidebar', 'context'].forEach((id) => $(id).classList.remove('open'));
+  document.querySelector('.aipanel')?.classList.remove('open');
+  document.body.classList.remove('drawered');
+  $('scrim').hidden = true;
 }
 
 // ============================================================
@@ -271,6 +309,7 @@ async function openBook(id) {
   localStorage.setItem('inkwell.lastBook', id);
   state.chapterId = chapters()[0]?.id || null;
   $('bookTitleInput').value = state.book.meta.title || '';
+  syncPageView();
   renderSidebarBooks();
   renderChapterRail();
   renderQuote();
@@ -442,32 +481,41 @@ const saveOutlineDebounced = debounce(async () => {
 function stripContent(c) { const { content, ...rest } = c; return rest; }
 
 // ---------- node dragging ----------
+// Pointer events, so a chapter card can be dragged with a mouse, a finger or a
+// stylus. `touch-action: none` on the nodes keeps the browser from stealing the
+// gesture for scrolling.
 function initDrag() {
   let drag = null;
-  $('nodes').addEventListener('mousedown', (e) => {
+  $('nodes').addEventListener('pointerdown', (e) => {
+    if (e.button != null && e.button !== 0) return;
     const node = e.target.closest('[data-node]');
     if (!node) return;
     const ch = chapters().find((c) => c.id === node.dataset.node);
-    drag = { node, ch, sx: e.clientX, sy: e.clientY, ox: ch.x, oy: ch.y, moved: false };
+    if (!ch) return;
+    drag = { node, ch, id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: ch.x, oy: ch.y, moved: false };
     node.classList.add('dragging');
+    node.setPointerCapture?.(e.pointerId);
     e.preventDefault();
   });
-  window.addEventListener('mousemove', (e) => {
-    if (!drag) return;
+  $('nodes').addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
     const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) drag.moved = true;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) drag.moved = true;
     drag.ch.x = Math.max(0, drag.ox + dx);
     drag.ch.y = Math.max(0, drag.oy + dy);
     drag.node.style.left = drag.ch.x + 'px';
     drag.node.style.top = drag.ch.y + 'px';
   });
-  window.addEventListener('mouseup', () => {
-    if (!drag) return;
+  const end = (e) => {
+    if (!drag || (e.pointerId != null && e.pointerId !== drag.id)) return;
     drag.node.classList.remove('dragging');
+    drag.node.releasePointerCapture?.(drag.id);
     if (drag.moved) { renderMap(); saveOutlineDebounced(); }
     else { state.chapterId = drag.ch.id; renderChapterRail(); go('write'); }
     drag = null;
-  });
+  };
+  $('nodes').addEventListener('pointerup', end);
+  $('nodes').addEventListener('pointercancel', end);
 }
 
 // ============================================================
@@ -856,6 +904,7 @@ const saveChapterDebounced = debounce(async () => {
     await api(`/books/${state.book.meta.id}/outline`, { method: 'PUT', body: { acts: acts(), chapters: chapters().map(stripContent) } });
     $('saveState').textContent = 'saved ✓';
     renderChapterRail();
+    if (state.view === 'pages') renderPages();
   } catch { $('saveState').textContent = 'save failed'; }
 }, 900);
 
@@ -1252,11 +1301,24 @@ function wire() {
     await loadLibrary();
   }, 700);
 
+  // mobile drawers
+  $('menuBtn').onclick = () => openDrawer('sidebar');
+  $('ctxBtn').onclick = () => openDrawer('context');
+  $('aiFab').onclick = () => {
+    const p = document.querySelector('.aipanel');
+    const open = p.classList.toggle('open');
+    document.body.classList.toggle('drawered', open);
+    $('scrim').hidden = !open;
+  };
+  $('scrim').onclick = closeDrawers;
+
   $('chapterList').onclick = (e) => {
     const row = e.target.closest('[data-ch]');
     if (!row) return;
     state.chapterId = row.dataset.ch;
     renderChapterRail();
+    // Reading pages? Stay there and turn to that chapter.
+    if (state.view === 'pages') { closeDrawers(); renderPages({ rebuild: true }); return; }
     go('write');
   };
   $('addChapterBtn').onclick = addChapter;

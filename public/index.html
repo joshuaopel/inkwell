@@ -2,9 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0b10" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Inkwell — your local AI writing studio</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="pageview.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖋️</text></svg>" />
 </head>
 <body>
@@ -23,6 +28,7 @@
     <button class="railbtn" data-nav="notes"><svg viewBox="0 0 24 24"><path d="M5 3h9l5 5v13H5z"/><path d="M14 3v5h5M8 13h8M8 17h6"/></svg><span>Notes</span></button>
     <button class="railbtn" data-nav="bible"><svg viewBox="0 0 24 24"><path d="M4 4h7a2 2 0 012 2v14a2 2 0 00-2-2H4z"/><path d="M20 4h-7a2 2 0 00-2 2v14a2 2 0 012-2h7z"/></svg><span>Bible</span></button>
     <button class="railbtn" data-nav="cards"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1.4"/><rect x="13" y="4" width="8" height="7" rx="1.4"/><rect x="3" y="13" width="8" height="7" rx="1.4"/><rect x="13" y="13" width="8" height="7" rx="1.4"/></svg><span>Cards</span></button>
+    <button class="railbtn" data-nav="pages"><svg viewBox="0 0 24 24"><path d="M12 5.5C10 4 7.5 3.6 5 4v14c2.5-.4 5 0 7 1.5 2-1.5 4.5-1.9 7-1.5V4c-2.5-.4-5 0-7 1.5z"/><path d="M12 5.5v14"/></svg><span>Pages</span></button>
     <button class="railbtn" data-nav="export"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M8 11l4 4 4-4"/><path d="M4 19h16"/></svg><span>Export</span></button>
   </nav>
 
@@ -30,6 +36,7 @@
 
     <!-- ========== TOP BAR ========== -->
     <header class="topbar">
+      <button class="iconbtn mobonly" id="menuBtn" title="Books &amp; chapters" aria-label="Books and chapters">☰</button>
       <div class="brand">Inkwell</div>
       <input id="bookTitleInput" class="booktitle" placeholder="Untitled" hidden />
       <div class="seg" id="seg" hidden>
@@ -39,6 +46,7 @@
       </div>
       <div class="spacer"></div>
       <div class="modelpill"><span class="health" id="health">●</span><select id="modelSelect"></select></div>
+      <button class="iconbtn mobonly" id="ctxBtn" title="Interview panel" aria-label="Interview panel" hidden>💡</button>
       <button class="btn ghost" id="exportBtn" hidden>Export EPUB</button>
       <button class="iconbtn" id="settingsBtn" title="Settings">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1A1.7 1.7 0 008.9 19a1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1A1.7 1.7 0 004.6 8.9a1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
@@ -221,6 +229,61 @@
           </div>
         </section>
 
+        <!-- PAGES — the book as printed pages -->
+        <section class="view pages" id="view-pages" hidden>
+          <div class="pv-view" id="pv-view">
+            <div class="pv-main">
+              <div class="pv-bar">
+                <div class="seg small" id="pv-scope">
+                  <button data-scope="chapter" class="on">This chapter</button>
+                  <button data-scope="book">Whole book</button>
+                </div>
+                <div class="seg small" id="pv-zoom">
+                  <button data-zoom="fit" class="on">Fit</button>
+                  <button data-zoom="width">Width</button>
+                  <button data-zoom="1">100%</button>
+                  <button data-zoom="1.6">160%</button>
+                </div>
+                <button class="chipbtn on" id="pv-spread" title="Show facing pages">▯▯ Spread</button>
+                <div class="spacer"></div>
+                <button class="btn ghost sm" id="pv-print-btn" title="Print, or save as PDF">⎙ Print / PDF</button>
+                <button class="btn ghost sm" id="pv-art-btn">✧ Art</button>
+                <button class="btn gold-ghost sm" id="pv-design-btn">◐ Design</button>
+              </div>
+
+              <div class="pv-stage" id="pv-stage">
+                <div class="pv-paper" id="pv-paper">
+                  <div class="pv-clip" id="pv-clip">
+                    <div class="pv-flow" id="pv-flow"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pv-pager">
+                <button class="iconbtn" id="pv-prev" title="Previous page" aria-label="Previous page">‹</button>
+                <div class="pv-slider-wrap">
+                  <input type="range" id="pv-slider" min="0" max="0" value="0" aria-label="Page" />
+                  <div class="pv-marks" id="pv-marks" hidden></div>
+                </div>
+                <span id="pv-pageno"></span>
+                <button class="iconbtn" id="pv-next" title="Next page" aria-label="Next page">›</button>
+              </div>
+            </div>
+
+            <aside class="pv-panel" id="pv-panel" hidden>
+              <div class="pv-panel-head">
+                <div class="seg small" id="pv-panel-tabs">
+                  <button data-tab="design">Design</button>
+                  <button data-tab="art">Art</button>
+                </div>
+                <span id="pv-panel-title" hidden></span>
+                <button class="iconbtn" id="pv-panel-close" title="Close">✕</button>
+              </div>
+              <div class="pv-panel-body" id="pv-panel-body"></div>
+            </aside>
+          </div>
+        </section>
+
         <!-- EXPORT -->
         <section class="view" id="view-export" hidden>
           <div class="pane narrow">
@@ -375,6 +438,11 @@
     </div>
   </div>
 </div>
+
+<div class="scrim" id="scrim" hidden></div>
+<button class="fab mobonly" id="aiFab" hidden title="AI tools">✦</button>
+<input type="file" id="pv-file" accept="image/*" multiple hidden />
+<div id="pv-print"></div>
 
 <div class="toast" id="toast" hidden></div>
 <script type="module" src="app.js"></script>
