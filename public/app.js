@@ -1,6 +1,7 @@
 // Inkwell frontend. Vanilla ES modules — no build step, works offline.
 
 import { initPageView, renderPages, syncPageView } from './pageview.js';
+import * as voice from './voice.js';
 
 // ---------- helpers ----------
 const $ = (id) => document.getElementById(id);
@@ -106,6 +107,7 @@ async function boot() {
     model: () => state.model,
     view: () => state.view,
   });
+  await initVoice();
   await refreshProvider();
   await loadLibrary();
   const last = localStorage.getItem('inkwell.lastBook');
@@ -205,8 +207,33 @@ function openSettings() {
   $('set-spell').checked = s.editor.spellcheck;
   $('set-model').value = s.defaultModel || state.model;
   renderCloudSettings();
+  renderVoiceSettings();
   renderConn();
   $('settingsModal').hidden = false;
+}
+
+async function renderVoiceSettings() {
+  const v = vset();
+  $('set-speak-questions').checked = !!v.speakQuestions;
+  $('set-fix-names').checked = v.fixNames !== false;
+  $('set-rate').value = v.rate ?? 1;
+  $('out-rate').textContent = (+(v.rate ?? 1)).toFixed(2) + '×';
+
+  const voices = await voice.localVoices();
+  const sel = $('set-voice');
+  sel.innerHTML = voices.length
+    ? voices.map((x) => `<option value="${esc(x.voiceURI)}">${esc(x.name)} — ${esc(x.lang)}</option>`).join('')
+    : '<option value="">No on-device voices found</option>';
+  sel.value = v.voiceURI || voices[0]?.voiceURI || '';
+  sel.disabled = !voices.length;
+
+  const st = state.listen;
+  $('voiceStatus').innerHTML = voices.length
+    ? `Reading: <span class="ok">● ${voices.length} on-device voice${voices.length === 1 ? '' : 's'}</span><br>
+       Dictation: ${st === 'ready'
+        ? '<span class="ok">● on-device, ready</span>'
+        : `<span class="bad">● unavailable</span> — ${esc(LISTEN_MESSAGE[st] || '')}`}`
+    : 'No on-device voices are installed. Your operating system\'s accessibility settings can add some.';
 }
 
 async function renderConn() {
@@ -256,6 +283,13 @@ function collectSettings() {
   s.context.autoSummary = $('set-autosummary').checked;
   s.editor.spellcheck = $('set-spell').checked;
   s.defaultModel = $('set-model').value;
+  s.voice = {
+    ...s.voice,
+    voiceURI: $('set-voice').value,
+    rate: +$('set-rate').value,
+    speakQuestions: $('set-speak-questions').checked,
+    fixNames: $('set-fix-names').checked,
+  };
   s.cloud = {
     enabled: $('set-cloud-enabled').checked,
     service: $('set-cloud-service').value,
@@ -283,6 +317,147 @@ async function resetSettings() {
   applySettings();
   openSettings();
   toast('Settings reset to defaults.', 'ok');
+}
+
+// ============================================================
+//  VOICE
+// ============================================================
+// Everything here is on-device. Dictation refuses to run rather than fall back
+// to a browser's server-side recogniser — see public/voice.js for why.
+// Defaults merged here too: an older settings.json, or a settings fetch that
+// failed, shouldn't quietly turn features off while the UI says they're on.
+const VOICE_DEFAULTS = { voiceURI: '', rate: 1, lang: 'en-US', speakQuestions: false, fixNames: true };
+const vset = () => ({ ...VOICE_DEFAULTS, ...(state.settings?.voice || {}) });
+
+async function initVoice() {
+  // Reading aloud works nearly everywhere; dictation is the fussy half.
+  $('readAloudBtn').hidden = !voice.canSpeak();
+  $('speakQBtn').hidden = !voice.canSpeak();
+
+  state.listen = await voice.listenAvailability(vset().lang || 'en-US');
+  // Surfaced for diagnostics: "why is the mic button missing?" should be
+  // answerable without a debugger.
+  window.__listenState = state.listen;
+  renderMicState();
+}
+
+const LISTEN_MESSAGE = {
+  ready: '',
+  downloadable: 'One-time download needed for on-device speech.',
+  downloading: 'Downloading the speech model…',
+  'no-local': 'This browser can only transcribe on a server, so Inkwell won\'t use it. Chrome or Edge can do it on-device.',
+  unsupported: 'This browser has no speech recognition. Chrome or Edge can transcribe on-device.',
+};
+
+function renderMicState() {
+  const btn = $('micBtn');
+  const note = $('voiceNote');
+  if (!btn) return;
+  const st = state.listen;
+  btn.hidden = st === 'unsupported' || st === 'no-local';
+  note.textContent = st === 'ready' ? '' : (LISTEN_MESSAGE[st] || '');
+  note.className = 'voicenote' + (st === 'ready' ? '' : ' warn');
+
+  if (st === 'downloadable') {
+    btn.hidden = false;
+    $('micLabel').textContent = 'Enable speech';
+    btn.classList.remove('on');
+  } else if (st === 'downloading') {
+    btn.hidden = false;
+    btn.disabled = true;
+    $('micLabel').textContent = 'Downloading…';
+  } else {
+    btn.disabled = false;
+    $('micLabel').textContent = voice.isListening() ? 'Stop' : 'Speak';
+    btn.classList.toggle('on', voice.isListening());
+  }
+}
+
+let dictationBase = '';
+
+async function toggleMic() {
+  if (voice.isListening()) { voice.stopListening(); return; }
+
+  if (state.listen === 'downloadable') {
+    state.listen = 'downloading';
+    renderMicState();
+    const ok = await voice.installLocalRecognition(vset().lang || 'en-US');
+    state.listen = ok ? 'ready' : 'no-local';
+    renderMicState();
+    if (!ok) toast('Could not install on-device speech.', 'err');
+    return;
+  }
+  if (state.listen !== 'ready') return;
+
+  const box = $('answerInput');
+  dictationBase = box.value ? box.value.replace(/\s*$/, ' ') : '';
+  $('nameFixes').hidden = true;
+
+  const ok = await voice.startListening({
+    lang: vset().lang || 'en-US',
+    onInterim: (t) => { box.value = dictationBase + t; },
+    onFinal: (t) => { box.value = dictationBase + t; },
+    onEnd: (t) => {
+      box.value = applyNameFixes(dictationBase + t);
+      box.focus();
+      renderMicState();
+    },
+    onError: (e) => {
+      toast(LISTEN_MESSAGE[e] || ('Dictation stopped: ' + e), 'err');
+      renderMicState();
+    },
+  });
+  if (ok) renderMicState();
+}
+
+// Put the book's proper nouns right, and show what changed so a wrong guess is
+// visible rather than silently baked into the answer.
+function applyNameFixes(text) {
+  if (!vset().fixNames || !state.book) return text;
+  const names = voice.bibleNames(state.book.bible || {});
+  window.__names = names;
+  const { text: fixed, fixes } = voice.correctNames(text, names);
+  const box = $('nameFixes');
+  if (fixes.length) {
+    box.innerHTML = `Corrected from your story bible: ` +
+      fixes.map((f) => `<b>${esc(f.from)} → ${esc(f.to)}</b>`).join(', ') +
+      ` <button class="linkbtn" id="undoNames">undo</button>`;
+    box.hidden = false;
+    $('undoNames').onclick = () => { $('answerInput').value = text; box.hidden = true; };
+  } else {
+    box.hidden = true;
+  }
+  return fixed;
+}
+
+function speakText(text) {
+  if (!text?.trim()) return;
+  voice.speak(text, { voiceURI: vset().voiceURI, rate: vset().rate ?? 1 });
+}
+
+// Read the chapter — or just the selection — aloud, moving the editor's own
+// selection along with it so you can see where you are.
+function readAloud() {
+  const ed = $('editor');
+  if (voice.isSpeaking()) { voice.stopSpeaking(); $('readAloudBtn').textContent = '🔊 Read this aloud'; return; }
+
+  const from = ed.selectionStart, to = ed.selectionEnd;
+  const whole = ed.value;
+  const hasSel = to > from;
+  const text = hasSel ? whole.slice(from, to) : whole;
+  const offset = hasSel ? from : 0;
+  if (!text.trim()) return toast('Nothing to read yet.', 'err');
+
+  $('readAloudBtn').textContent = '■ Stop reading';
+  ed.focus();
+  voice.speak(text, {
+    voiceURI: vset().voiceURI,
+    rate: vset().rate ?? 1,
+    onChunk: (c) => ed.setSelectionRange(offset + c.start, offset + c.end),
+    onEnd: () => { $('readAloudBtn').textContent = '🔊 Read this aloud'; ed.setSelectionRange(from, hasSel ? to : from); },
+    onStop: () => { $('readAloudBtn').textContent = '🔊 Read this aloud'; },
+    onError: (e) => { toast('Could not read aloud: ' + e, 'err'); },
+  });
 }
 
 // ============================================================
@@ -587,6 +762,13 @@ function initDrag() {
 // ============================================================
 //  INTERVIEW (context panel)
 // ============================================================
+// The question currently waiting for an answer, if any.
+function pendingQuestion() {
+  const msgs = state.book?.plan?.messages || [];
+  const last = msgs.at(-1);
+  return last?.role === 'assistant' ? last.content : '';
+}
+
 function transcriptPairs() {
   const msgs = state.book?.plan?.messages || [];
   const out = [];
@@ -610,6 +792,15 @@ function renderContext() {
 
   const pending = msgs.length > 0 && msgs.at(-1).role === 'assistant';
   $('answerBox').hidden = !pending;
+  $('speakQBtn').hidden = !pending || !voice.canSpeak();
+
+  // Read a newly-arrived question aloud, once, if you've asked for that.
+  const q = pendingQuestion();
+  if (pending && q && vset().speakQuestions && q !== state.spokenQuestion) {
+    state.spokenQuestion = q;
+    speakText(q);
+  }
+  if (pending) renderMicState();
   $('suggestQ').hidden = pending || !plan.suggested?.question;
   if (plan.suggested?.question) $('sqText').textContent = plan.suggested.question;
   const showStart = !pending && !plan.suggested?.question;
@@ -1555,6 +1746,19 @@ function wire() {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); sendAnswer(); }
   });
   $('resumeBtn').onclick = () => { $('transcript').scrollTop = $('transcript').scrollHeight; $('answerInput')?.focus(); };
+
+  // voice
+  $('micBtn').onclick = toggleMic;
+  $('speakQBtn').onclick = () => {
+    if (voice.isSpeaking()) return voice.stopSpeaking();
+    speakText(pendingQuestion());
+  };
+  $('readAloudBtn').onclick = readAloud;
+  $('set-rate').addEventListener('input', (e) => ($('out-rate').textContent = (+e.target.value).toFixed(2) + '×'));
+  // Typing or clicking in the editor cancels playback — the selection is about
+  // to be yours again.
+  $('editor').addEventListener('keydown', () => { if (voice.isSpeaking()) voice.stopSpeaking(); });
+  $('editor').addEventListener('mousedown', () => { if (voice.isSpeaking()) voice.stopSpeaking(); });
   $('openBibleBtn').onclick = () => go('bible');
 
   // write
