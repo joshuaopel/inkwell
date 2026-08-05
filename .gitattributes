@@ -1,0 +1,4 @@
+# Batch files must keep CRLF endings or cmd.exe mis-parses them, whatever the
+# checkout platform does with everything else.
+*.bat text eol=crlf
+*.cmd text eol=crlf
