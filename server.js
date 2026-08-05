@@ -5,7 +5,7 @@ import { Readable } from 'node:stream';
 
 import os from 'node:os';
 
-import { provider, OLLAMA_HOST } from './lib/ollama.js';
+import { providerFor, cloudProvider, cloudConfigured, ollama, OLLAMA_HOST, CLOUD_SERVICES, CLOUD_PREFIX } from './lib/ollama.js';
 import * as store from './lib/store.js';
 import { systemPrompt, buildWriteMessages } from './lib/context.js';
 import { interviewMessages, outlineMessages, bibleSeedMessages, summaryMessages, nextQuestionMessages, refineOutlineMessages, designMessages } from './lib/prompts.js';
@@ -16,8 +16,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
-
-const P = provider();
 
 // Pull the first JSON object/array out of a model response, tolerating stray
 // prose or code fences that small local models sometimes add.
@@ -69,20 +67,43 @@ async function planOptions() {
   };
 }
 
+// Pick the adapter for a request. Local unless the model id says otherwise, so
+// the default path never touches the network.
+const P = async (model) => providerFor(model, await store.getSettings());
+
 // ---- Provider / health ----
 app.get('/api/health', asyncH(async (_req, res) => {
-  const ok = await P.health();
-  res.json({ ollama: ok, host: OLLAMA_HOST });
+  const settings = await store.getSettings();
+  const ok = await ollama.health();
+  const cloud = cloudConfigured(settings);
+  res.json({
+    ollama: ok,
+    host: OLLAMA_HOST,
+    cloud: cloud ? { enabled: true, service: settings.cloud.service, ok: await cloudProvider(settings).health() } : { enabled: false },
+  });
 }));
 
 app.get('/api/models', asyncH(async (_req, res) => {
-  res.json({ models: await P.listModels() });
+  const settings = await store.getSettings();
+  const out = { models: [], errors: {} };
+  try { out.models = await ollama.listModels(); }
+  catch (e) { out.errors.local = String(e.message || e); }
+
+  // Cloud models are additive and never block the local list.
+  if (cloudConfigured(settings)) {
+    try { out.models = out.models.concat(await cloudProvider(settings).listModels()); }
+    catch (e) { out.errors.cloud = String(e.message || e); }
+  }
+  res.json(out);
 }));
 
+app.get('/api/cloud/services', (_req, res) => res.json({ services: CLOUD_SERVICES, prefix: CLOUD_PREFIX }));
+
 // ---- Settings ----
-app.get('/api/settings', asyncH(async (_req, res) => res.json(await store.getSettings())));
-app.put('/api/settings', asyncH(async (req, res) => res.json(await store.saveSettings(req.body || {}))));
-app.post('/api/settings/reset', asyncH(async (_req, res) => res.json(await store.saveSettings(store.DEFAULT_SETTINGS))));
+// The API key is never sent back out, only whether one exists.
+app.get('/api/settings', asyncH(async (_req, res) => res.json(store.redactSettings(await store.getSettings()))));
+app.put('/api/settings', asyncH(async (req, res) => res.json(store.redactSettings(await store.saveSettings(req.body || {})))));
+app.post('/api/settings/reset', asyncH(async (_req, res) => res.json(store.redactSettings(await store.saveSettings(store.DEFAULT_SETTINGS)))));
 
 // ---- Books ----
 app.get('/api/books', asyncH(async (_req, res) => res.json({ books: await store.listBooks() })));
@@ -124,7 +145,7 @@ app.put('/api/books/:id/design', asyncH(async (req, res) => res.json(await store
 app.post('/api/design/suggest', asyncH(async (req, res) => {
   const { model, meta = {}, bible = {}, brief, base } = req.body || {};
   const cat = catalog();
-  const text = await P.chatOnce({
+  const text = await (await P(model)).chatOnce({
     model, format: 'json', options: await planOptions(),
     messages: designMessages({ meta, bible, catalog: cat, brief }),
   });
@@ -236,7 +257,7 @@ app.delete('/api/books/:id/assets/:assetId', asyncH(async (req, res) => {
 // ---- Plan mode ----
 app.post('/api/plan/interview', asyncH(async (req, res) => {
   const { model, premise, genre, pov, tense } = req.body || {};
-  const text = await P.chatOnce({ model, messages: interviewMessages({ premise, genre, pov, tense }), format: 'json' });
+  const text = await (await P(model)).chatOnce({ model, messages: interviewMessages({ premise, genre, pov, tense }), format: 'json' });
   const data = parseJsonLoose(text) || { questions: [] };
   res.json(data);
 }));
@@ -244,7 +265,7 @@ app.post('/api/plan/interview', asyncH(async (req, res) => {
 // One question at a time, aware of everything already said.
 app.post('/api/plan/next-question', asyncH(async (req, res) => {
   const { model, premise, genre, pov, tense, transcript } = req.body || {};
-  const text = await P.chatOnce({
+  const text = await (await P(model)).chatOnce({
     model, format: 'json', options: await planOptions(),
     messages: nextQuestionMessages({ premise, genre, pov, tense, transcript }),
   });
@@ -254,14 +275,14 @@ app.post('/api/plan/next-question', asyncH(async (req, res) => {
 
 app.post('/api/plan/outline', asyncH(async (req, res) => {
   const { model, premise, genre, pov, tense, answers } = req.body || {};
-  const text = await P.chatOnce({ model, messages: outlineMessages({ premise, genre, pov, tense, answers }), format: 'json', options: await planOptions() });
+  const text = await (await P(model)).chatOnce({ model, messages: outlineMessages({ premise, genre, pov, tense, answers }), format: 'json', options: await planOptions() });
   const data = parseJsonLoose(text) || { synopsis: '', chapters: [] };
   res.json(data);
 }));
 
 app.post('/api/plan/bible', asyncH(async (req, res) => {
   const { model, premise, genre, answers, synopsis } = req.body || {};
-  const text = await P.chatOnce({ model, messages: bibleSeedMessages({ premise, genre, answers, synopsis }), format: 'json', options: await planOptions() });
+  const text = await (await P(model)).chatOnce({ model, messages: bibleSeedMessages({ premise, genre, answers, synopsis }), format: 'json', options: await planOptions() });
   const data = parseJsonLoose(text) || { characters: [], locations: [], themes: [], styleGuide: '' };
   res.json(data);
 }));
@@ -269,7 +290,7 @@ app.post('/api/plan/bible', asyncH(async (req, res) => {
 // Refine an existing outline against structural notes.
 app.post('/api/plan/refine-outline', asyncH(async (req, res) => {
   const { model, premise, genre, pov, tense, synopsis, answers, currentOutline, notes, targetChapters } = req.body || {};
-  const text = await P.chatOnce({
+  const text = await (await P(model)).chatOnce({
     model, format: 'json', options: await planOptions(),
     messages: refineOutlineMessages({ premise, genre, pov, tense, synopsis, answers, currentOutline, notes, targetChapters }),
   });
@@ -279,7 +300,7 @@ app.post('/api/plan/refine-outline', asyncH(async (req, res) => {
 
 app.post('/api/summary', asyncH(async (req, res) => {
   const { model, previousSummary, newChapterTitle, newChapterText } = req.body || {};
-  const text = await P.chatOnce({ model, messages: summaryMessages({ previousSummary, newChapterTitle, newChapterText }), format: 'json', options: await planOptions() });
+  const text = await (await P(model)).chatOnce({ model, messages: summaryMessages({ previousSummary, newChapterTitle, newChapterText }), format: 'json', options: await planOptions() });
   const data = parseJsonLoose(text) || { summary: previousSummary || '' };
   res.json(data);
 }));
@@ -300,7 +321,7 @@ app.post('/api/write', asyncH(async (req, res) => {
       localWords: ctx.localWords, includeBible: ctx.includeBible, includeSummary: ctx.includeSummary,
     }),
   ];
-  const body = await P.chatStream({ model, messages, options });
+  const body = await (await P(model)).chatStream({ model, messages, options });
   res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache');
   Readable.fromWeb(body).pipe(res);

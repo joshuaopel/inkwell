@@ -414,6 +414,10 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--v
   border-radius: 6px; padding: 7px 9px; font-size: 13px; width: 100%;
   margin-top: 6px; font-family: inherit;
 }
+.memrow-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-top: 8px;
+}
 .entry .ename { font-weight: 600; }
 .entry .remove { position: absolute; top: 8px; right: 8px; }
 
@@ -521,6 +525,23 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--v
   color: var(--ink-dim); margin: 10px 0; cursor: pointer;
 }
 .setcheck input { accent-color: var(--violet); width: 15px; height: 15px; }
+/* Where-the-model-runs cards. The local one is visually the destination; the
+   cloud one is deliberately quieter. */
+.runcard { border-radius: 10px; padding: 14px 16px; margin: 12px 0; border: 1px solid var(--line); }
+.runcard.primary { border-color: rgba(87,201,138,.4); background: rgba(87,201,138,.05); }
+.runcard.secondary { background: #0c0e14; }
+.runcard-head { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.runcard-title { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.runcard-badge {
+  font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
+  color: var(--green); border: 1px solid rgba(87,201,138,.45); border-radius: 999px; padding: 2px 8px;
+}
+.cloudhint { font-size: 12px; color: var(--ink-dim); margin-top: 10px; line-height: 1.5; }
+.cloudhint .ok { color: var(--green); }
+.cloudhint .bad { color: var(--bad); }
+.health.cloud { color: var(--amber); }
+#modelSelect optgroup { background: var(--panel); color: var(--ink-faint); font-style: normal; }
+
 .conn { font-size: 12.5px; color: var(--ink-dim); line-height: 1.7; margin-bottom: 12px; }
 .conn b { color: var(--ink); font-weight: 600; }
 .conn .ok { color: var(--green); }

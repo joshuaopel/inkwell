@@ -355,6 +355,27 @@ pre .p { color: var(--gold); }
 .tree b { color: var(--gold); font-weight: 500; }
 .tree i { color: var(--faint); font-style: normal; }
 
+/* ---------- who made this ---------- */
+.maker { display: grid; gap: 18px; margin: 26px 0; }
+@media (min-width: 800px) { .maker { grid-template-columns: minmax(0, 1fr) 260px; align-items: start; } }
+.maker-body { max-width: 62ch; }
+.maker-body p { margin: 0 0 16px; }
+.maker-cta { color: var(--gold-lit); font-family: var(--serif); font-style: italic; font-size: 1.06rem; }
+.maker-side {
+  background: var(--panel); border: 1px solid rgba(210,173,99,.32);
+  border-radius: 12px; padding: 18px 20px;
+}
+.maker-badge {
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+  color: var(--gold); padding-bottom: 14px; border-bottom: 1px solid var(--line-soft);
+}
+.maker-badge span {
+  font-family: var(--serif); font-size: 1.02rem; font-weight: 600; letter-spacing: .01em;
+}
+.maker-facts { margin: 14px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; }
+.maker-facts dt { color: var(--faint); }
+.maker-facts dd { margin: 0; color: var(--ink); }
+
 /* ---------- footer ---------- */
 footer {
   margin-top: 70px; padding: 34px 0 60px; border-top: 1px solid var(--line-soft);
@@ -371,6 +392,7 @@ footer p { margin: 0 0 8px; }
   <nav class="rail" aria-label="Contents">
     <div class="rail-title">The guide</div>
     <a href="#free">Why it's free</a>
+    <a href="#who">Who made this</a>
     <a href="#machine">Where it runs</a>
     <a href="#interview" class="spot">★ The interview</a>
     <a href="#memory">How it remembers</a>
@@ -378,6 +400,7 @@ footer p { margin: 0 0 8px; }
     <a href="#control">Controlling creativity</a>
     <a href="#pages">Seeing the book</a>
     <a href="#ollama">Setting up Ollama</a>
+    <a href="#cloud">If you can't run one</a>
     <a href="#phone">From your phone</a>
     <a href="#first">Your first hour</a>
     <a href="#files">Where work lives</a>
@@ -391,7 +414,7 @@ footer p { margin: 0 0 8px; }
           <path d="M20 3c-6 1-11 5-13 11l-2 5 5-2c6-2 9-7 10-13z"/><path d="M5 19c3-4 6-7 10-9"/>
         </svg>
         <b>Inkwell</b>
-        <span>The guide</span>
+        <span>by Bowler Hat Studio</span>
       </div>
 
       <h1>A writing studio that runs on <em>your</em> machine.</h1>
@@ -452,6 +475,58 @@ footer p { margin: 0 0 8px; }
         model good enough to be genuinely useful, and a desktop with a real GPU will run one that's
         better than useful. <a href="#ollama">The setup section</a> tells you exactly which to pull.
       </p>
+
+      <div class="note-box">
+        <p><b>There is a cloud option, and it's deliberately the second choice.</b> If you're on a
+        machine that genuinely can't run a model, Settings will take an API key and put those models
+        in the picker under a “Cloud · billed per word” heading. It works properly — same interview,
+        same memory, same everything. But it re-introduces both things this project exists to avoid:
+        a meter, and your manuscript leaving your machine.
+        <a href="#cloud">More on when that's the right call.</a></p>
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- ================= WHO ================= -->
+    <section id="who">
+      <p class="eyebrow">Who made this</p>
+      <h2>Joshua Opel, at Bowler Hat Studio</h2>
+
+      <div class="maker">
+        <div class="maker-body">
+          <p>
+            Inkwell is built and maintained by <strong>Joshua Opel</strong> at
+            <strong>Bowler Hat Studio</strong>, and given away — MIT licensed, no accounts,
+            no paid tier held in reserve, no "open core" with the good parts behind a wall.
+          </p>
+          <p>
+            It exists because the tools sold to novelists are rented, metered, and pointed at
+            someone else's server. A writer's manuscript should live on the writer's disk, and
+            the machinery around it should be inspectable by the person relying on it. So: every
+            line of this is readable, every book is a folder you own, and the only thing it costs
+            is the electricity to run the model.
+          </p>
+          <p class="maker-cta">
+            If it's useful to you, the kindest thing you can do is tell another writer it exists.
+          </p>
+        </div>
+        <div class="maker-side">
+          <div class="maker-badge">
+            <svg viewBox="0 0 48 26" aria-hidden="true" width="46" height="26">
+              <path d="M4 22 H44" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+              <path d="M13 22 C13 10, 18 5, 24 5 C30 5, 35 10, 35 22" stroke="currentColor" stroke-width="2" fill="none"/>
+              <path d="M10 22 C10 18, 38 18, 38 22" stroke="currentColor" stroke-width="1.4" fill="none" opacity=".6"/>
+            </svg>
+            <span>Bowler Hat Studio</span>
+          </div>
+          <dl class="maker-facts">
+            <dt>Licence</dt><dd>MIT — do what you like</dd>
+            <dt>Price</dt><dd>None, and no plans for one</dd>
+            <dt>Your data</dt><dd>Never leaves your machine</dd>
+          </dl>
+        </div>
+      </div>
     </section>
 
     <hr />
@@ -795,11 +870,27 @@ footer p { margin: 0 0 8px; }
         </figcaption>
       </figure>
 
+      <h3>The summary keeps itself</h3>
+
       <p class="col">
-        After a chapter is finished, Inkwell folds it into a running <em>story so far</em> summary,
-        so the top layer stays current without ever resending the whole manuscript. All three layers
-        are adjustable in Settings — if generation feels slow, that's the first place to look, because
-        everything there is sent on <em>every</em> request.
+        The top layer would go stale immediately if it were your job to maintain it, so it isn't.
+        When you <strong>leave a chapter you've meaningfully added to</strong> — switch chapters,
+        or go look at the outline — that chapter is summarised and folded into the running
+        <em>story so far</em>. One model call, in the background, and the editor never blocks. The
+        memory card in the interview panel tells you the score: <em class="q">"4/6 chapters folded
+        in"</em>.
+      </p>
+
+      <p class="col">
+        Two escape hatches. Opening a book written before any of this existed? The Bible tab has
+        <strong>↻ Fold in written chapters</strong>, which walks everything unsummarised and catches
+        up. Don't want it happening at all? Settings has a switch, and the summary box stays yours
+        to type into by hand.
+      </p>
+
+      <p class="col">
+        All three layers are adjustable in Settings — if generation feels slow, that's the first
+        place to look, because everything there is sent on <em>every</em> request.
       </p>
     </section>
 
@@ -1193,6 +1284,82 @@ npm start</pre>
 
     <hr />
 
+    <!-- ================= CLOUD ================= -->
+    <section id="cloud">
+      <p class="eyebrow">The escape hatch</p>
+      <h2>If your machine really can't run a model</h2>
+
+      <p class="col">
+        Some machines can't. A work laptop you don't control, an 8&nbsp;GB Chromebook, an iPad.
+        Rather than pretend otherwise, Inkwell will take an API key and put cloud models in the
+        picker — clearly labelled, and never the default.
+      </p>
+
+      <div class="cards two">
+        <div class="card lit">
+          <h5>Local — the whole point</h5>
+          <p>
+            Free forever. Unlimited revisions. Your manuscript never leaves the building. Works on a
+            plane. No account to lose, no price change to absorb, no service to shut down. This is
+            what every other page of this guide assumes.
+          </p>
+        </div>
+        <div class="card">
+          <h5>Cloud — when there's no other way</h5>
+          <p>
+            Billed per word by the provider. Your prose, story bible and interview go to their
+            servers. Needs a working internet connection. In exchange: it runs on anything, and the
+            biggest models are better writers than anything you can host at home.
+          </p>
+        </div>
+      </div>
+
+      <h3>Setting it up</h3>
+
+      <p class="col">
+        Settings → <strong>Where the model runs</strong> → tick <em class="q">"Also offer a cloud API
+        in the model list"</em>. Choose the service, paste the key, save. Cloud models then appear in
+        the top-right picker under a <strong>Cloud · billed per word</strong> heading, so you always
+        know which one you're about to spend money on.
+      </p>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Service setting</th><th>Base URL</th><th>Covers</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>OpenAI-compatible</b></td>
+              <td><code>https://api.openai.com/v1</code></td>
+              <td>OpenAI directly — or point it anywhere that speaks the same API: OpenRouter, Groq, Together, and local servers like LM Studio or llama.cpp.</td>
+            </tr>
+            <tr>
+              <td><b>Anthropic</b></td>
+              <td><code>https://api.anthropic.com/v1</code></td>
+              <td>Claude models, direct.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note-box">
+        <p><b>Your key stays on your machine.</b> It's written to <code>settings.json</code> beside
+        your books — the same file your other settings live in, already excluded from git. The
+        browser is only ever told <em>whether</em> a key is set, never what it is, so it can't leak
+        through a screenshot or a session someone else opened over your Wi-Fi.</p>
+      </div>
+
+      <p class="col">
+        Everything else is unchanged. The interview, the three-layer memory, the diff gate, the
+        Pages view, the EPUB — all of it works the same, because the provider layer is the only
+        part that knows the difference. You can switch between a local and a cloud model mid-chapter
+        from the same dropdown.
+      </p>
+
+      <p class="pull">Use the cloud if you must. But if you can run it at home, run it at home.</p>
+    </section>
+
+    <hr />
+
     <!-- ================= PHONE ================= -->
     <section id="phone">
       <p class="eyebrow">Elsewhere in the house</p>
@@ -1295,7 +1462,8 @@ Inkwell/books/&lt;book-id&gt;/
 
     <footer>
       <p><strong>Inkwell</strong> — a local, private writing studio. MIT licensed, free forever, no strings.</p>
-      <p>Built because good tools for novelists shouldn't have a meter on them.</p>
+      <p>Built by <strong>Joshua Opel</strong> at <strong>Bowler Hat Studio</strong>, because good
+        tools for novelists shouldn't have a meter on them.</p>
     </footer>
 
   </main>

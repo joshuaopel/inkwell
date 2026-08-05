@@ -1,0 +1,70 @@
+# Publishes the Inkwell guide to GitHub Pages.
+#
+# The guide is a single self-contained page that already ships inside the app at
+# public/guide.html, so this workflow copies rather than builds — one source of
+# truth, no second copy to drift out of date.
+#
+# One-time setup: repository Settings → Pages → Build and deployment →
+# Source: "GitHub Actions". Then this runs on every push that touches the guide.
+
+name: Deploy the guide to Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/guide.html'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; a queued one supersedes the one before it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          cp public/guide.html _site/index.html
+          cp public/manifest.webmanifest _site/manifest.webmanifest
+          # Pages runs Jekyll unless told not to; this page is already finished.
+          touch _site/.nojekyll
+
+      - name: Check the page is self-contained
+        run: |
+          # The guide must render with the network unplugged, so nothing may be
+          # *loaded* from another host: no CDN fonts, scripts or images. Ordinary
+          # <a href> links out are fine — those are navigation, not resources.
+          if grep -Eq '(<script[^>]+src|<img[^>]+src|<link[^>]+href|@import|url\()\s*=?\s*["'"'"']?https?://' _site/index.html; then
+            echo "The guide loads something from another host:"
+            grep -En '(<script[^>]+src|<img[^>]+src|<link[^>]+href|@import|url\()\s*=?\s*["'"'"']?https?://' _site/index.html
+            exit 1
+          fi
+          test -s _site/index.html
+          echo "Guide is self-contained ($(wc -c < _site/index.html) bytes)."
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
