@@ -107,10 +107,13 @@ Small models (like `qwen2.5:3b`) work for testing the flow, but for real prose p
 something bigger:
 
 ```bash
+ollama pull gemma4:e4b     # ~10 GB, plans and writes well
 ollama pull llama3.1:8b
-ollama pull qwen2.5:14b
 ollama pull mistral-nemo
 ```
+
+Model names move — `ollama.com/library` has the current releases, and `ollama list`
+shows what you already have.
 
 ## Run
 
