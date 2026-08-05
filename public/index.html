@@ -209,6 +209,10 @@
               <label>Tone<input id="bi-tone" placeholder="Cold rain on paper. Precise, restrained, faintly cruel." /></label>
               <label>Style guide — the voice to hold<textarea id="bi-style" rows="2"></textarea></label>
               <label>Story so far (running summary)<textarea id="bi-summary" rows="5"></textarea></label>
+              <div class="memrow-actions">
+                <span class="submeta" id="memCoverage"></span>
+                <button class="btn ghost sm" id="foldMemoryBtn">↻ Fold in written chapters</button>
+              </div>
             </section>
             <button class="btn primary" id="saveBibleBtn">Save bible</button>
           </div>
@@ -414,6 +418,7 @@
         <div class="setrow slider"><span>Surrounding prose <em>(words)</em></span><input type="range" id="set-local" min="100" max="1200" step="50"><output id="out-local"></output></div>
         <label class="setcheck"><input type="checkbox" id="set-bible"> Send the story bible (characters, locations, lore)</label>
         <label class="setcheck"><input type="checkbox" id="set-summary"> Send the running “story so far” summary</label>
+        <label class="setcheck"><input type="checkbox" id="set-autosummary"> Keep that summary current automatically — when you leave a chapter you've added to, fold it in</label>
       </section>
 
       <section class="setsec">
@@ -425,9 +430,36 @@
       </section>
 
       <section class="setsec">
-        <h3>Connection</h3>
-        <div class="conn" id="connInfo"></div>
-        <button class="btn ghost sm" id="set-refresh">Refresh models</button>
+        <h3>Where the model runs</h3>
+        <p class="sethint">Inkwell is built for a model on your own machine — private, unmetered, and yours. A cloud key is here only for devices that can't run one.</p>
+
+        <div class="runcard primary">
+          <div class="runcard-head">
+            <span class="runcard-title">On your machine — Ollama</span>
+            <span class="runcard-badge">recommended</span>
+          </div>
+          <div class="conn" id="connInfo"></div>
+          <button class="btn ghost sm" id="set-refresh">Refresh models</button>
+        </div>
+
+        <label class="setcheck"><input type="checkbox" id="set-cloud-enabled"> Also offer a cloud API in the model list</label>
+
+        <div class="runcard secondary" id="cloudBox" hidden>
+          <p class="sethint" style="margin-top:0">
+            Cloud models are billed per word by the provider and your manuscript is sent to them.
+            The key is stored in <code>settings.json</code> on this machine and is never sent to the browser.
+          </p>
+          <label class="setrow">Service
+            <select id="set-cloud-service"></select>
+          </label>
+          <label class="setrow">Base URL
+            <input type="text" id="set-cloud-base" placeholder="https://api.openai.com/v1" />
+          </label>
+          <label class="setrow">API key
+            <input type="password" id="set-cloud-key" placeholder="sk-…" autocomplete="off" />
+          </label>
+          <div class="cloudhint" id="cloudHint"></div>
+        </div>
       </section>
     </div>
 
