@@ -4,6 +4,11 @@ Your own local, private AI writing studio for novels & short stories. Runs entir
 on your machine against your own [Ollama](https://ollama.com) models — no API keys,
 no per-word cost, nothing leaves your computer. Exports **KDP-ready EPUB** for Kindle.
 
+Built by **[Joshua Opel](https://github.com/joshuaopel)** at **Bowler Hat Studio**, and
+given away. MIT licensed, no accounts, no paid tier, no "open core" with the good parts
+behind a wall — because the tools sold to novelists are rented, metered, and pointed at
+someone else's server, and they shouldn't be.
+
 Built as a smarter, personal alternative to Sudowrite. The difference is the
 **scaffolding around the model**:
 
@@ -37,6 +42,14 @@ Built as a smarter, personal alternative to Sudowrite. The difference is the
   outline with a **before/after preview** (new / moved / kept chapters colour-coded).
   Or **Rebuild from interview** to fold newer answers into the whole plan. Both preserve
   any chapters you've already written.
+- **Talk to it, out loud** — answer interview questions by speaking instead of typing, which
+  is where thin answers come from. The transcript lands in the box as editable text, and gets
+  checked against your story bible so *"Marin Veil in Sable Port"* becomes **Maren Vale in
+  Sableport** — matched on sound, not spelling, with every correction shown and undoable.
+  Inkwell also **reads your prose back to you**, tracking the selection as it goes, which is
+  the fastest way to hear a clunky sentence. Both directions are on-device only: it uses your
+  system's local voices, and it refuses to dictate at all rather than stream your voice to
+  someone's server.
 - **Pages — see the printed book** — every chapter laid out as real pages at a real
   trim size, paginated by the browser itself, so what you see is what prints. Choose the
   trim (5×8 up to 8.5×11), the margins, the typeface, the size and leading, justification,
@@ -58,11 +71,18 @@ Built as a smarter, personal alternative to Sudowrite. The difference is the
 
 ## The guide
 
-There's a full illustrated guide bundled with the app — how the interview works, how to
-control the model's creativity, how to set up Ollama and pick a model, and how to read
-from your phone. Open **[`public/guide.html`](public/guide.html)** in a browser, or click
-the **?** in Inkwell's top bar while it's running (`http://localhost:4321/guide.html`).
-Like everything else here, it works with the network unplugged.
+There's a full illustrated guide — how the interview works, how the memory engine keeps
+your book straight, how to control the model's creativity, how to set up Ollama and pick
+a model, and how to write from your phone.
+
+- **Online:** <https://joshuaopel.github.io/inkwell/>
+- **Offline:** click the **?** in Inkwell's top bar (`http://localhost:4321/guide.html`)
+
+It lives at [`index.html`](index.html) in the repo root — one file, which is both
+the published site and the page the app serves.
+
+It ships inside the app and uses no webfonts or CDNs, so like everything else here it
+works with the network unplugged.
 
 ## Screenshots
 
@@ -176,11 +196,30 @@ default four acts and auto-arrange on first view.
 
 Back this folder up and you've backed up everything.
 
-## Adding cloud models later (optional)
+## Cloud models (optional, and deliberately second)
 
-The provider layer in `lib/ollama.js` is pluggable. To add OpenAI / Anthropic /
-OpenRouter, add an entry with the same `{ listModels, chatOnce, chatStream, health }`
-shape and set `INKWELL_PROVIDER`. The rest of the app doesn't change.
+Some machines genuinely can't run a model — a locked-down work laptop, an 8 GB
+Chromebook, a tablet. For those, Settings → **Where the model runs** takes an API key
+and adds those models to the picker under a **Cloud · billed per word** heading, so
+it's always obvious which one costs money.
+
+- **OpenAI-compatible** — OpenAI itself, or point the base URL at OpenRouter, Groq,
+  Together, LM Studio, llama.cpp… anything speaking the same API.
+- **Anthropic** — Claude models, direct.
+
+Everything else is unchanged: same interview, same three-layer memory, same diff gate,
+same EPUB. You can switch between a local and a cloud model mid-chapter.
+
+Your key is written to `settings.json` on your machine (already git-ignored) and is
+**never sent back to the browser** — the UI is only told whether one is set. Cloud
+streaming is translated into the same wire format Ollama uses, so the rest of the app
+can't tell the difference.
+
+If you can run a model at home, run it at home. The cloud path re-introduces both
+things this project exists to avoid: a meter, and your manuscript leaving your machine.
+
+The provider layer lives in `lib/ollama.js` — adding another service means one more
+entry with the same `{ listModels, chatOnce, chatStream, health }` shape.
 
 ## Settings
 
@@ -191,10 +230,18 @@ folder (not in browser storage, so it survives cache clears):
   context window, response length. These are passed straight to Ollama.
 - **What the model is told** — how many words of surrounding prose to send, and
   whether to include the story bible and the running summary. Trim these if
-  generations feel slow; everything here goes on *every* request.
+  generations feel slow; everything here goes on *every* request. **Keep the summary
+  current automatically** folds each chapter into the running "story so far" when you
+  leave it, so the whole-book memory layer never goes stale (the Bible tab has a
+  manual ↻ for catching up an older book).
 - **Editor** — font size, line height, line width (in characters), spellcheck.
   Sliders preview live as you drag them.
 - **Connection** — Ollama host, status, and a model refresh.
+
+- **Voice** — which on-device voice reads to you, how fast, whether interview questions are
+  read automatically, and whether dictation is corrected against the story bible. Dictation
+  needs a browser that can transcribe on-device (Chrome or Edge today); reading aloud works
+  everywhere. Inkwell will tell you which you've got.
 
 Page design is per-book rather than global, and lives in the Pages tab.
 

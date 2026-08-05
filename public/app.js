@@ -1,6 +1,7 @@
 // Inkwell frontend. Vanilla ES modules — no build step, works offline.
 
 import { initPageView, renderPages, syncPageView } from './pageview.js';
+import * as voice from './voice.js';
 
 // ---------- helpers ----------
 const $ = (id) => document.getElementById(id);
@@ -106,6 +107,7 @@ async function boot() {
     model: () => state.model,
     view: () => state.view,
   });
+  await initVoice();
   await refreshProvider();
   await loadLibrary();
   const last = localStorage.getItem('inkwell.lastBook');
@@ -113,26 +115,50 @@ async function boot() {
   else go('home');
 }
 
+// A cloud model is anything the server prefixed. Kept as a helper so the
+// distinction is visible everywhere it matters.
+const isCloud = (name) => typeof name === 'string' && name.startsWith('cloud:');
+const modelLabel = (m) => (isCloud(m.name) ? m.name.slice(6) : m.name);
+
 async function refreshProvider() {
   try {
     const h = await api('/health');
+    state.health = h;
     const dot = $('health');
-    dot.className = 'health ' + (h.ollama ? 'ok' : 'bad');
-    dot.title = h.ollama ? `Ollama connected (${h.host})` : `Ollama not reachable at ${h.host}`;
-    if (!h.ollama) toast('Ollama not running — start it, then reload.', 'err');
+    const anyCloud = h.cloud?.enabled && h.cloud.ok;
+    dot.className = 'health ' + (h.ollama ? 'ok' : anyCloud ? 'cloud' : 'bad');
+    dot.title = h.ollama
+      ? `Ollama connected (${h.host})`
+      : anyCloud ? `Ollama not running — cloud (${h.cloud.service}) is available`
+        : `Ollama not reachable at ${h.host}`;
+    if (!h.ollama && !anyCloud) toast('Ollama not running — start it, then reload.', 'err');
   } catch {}
   try {
-    const { models } = await api('/models');
+    const { models, errors } = await api('/models');
     state.models = models;
-    const opts = models.map((m) => `<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
+
+    // Group the picker so it's always obvious which model costs money.
+    const group = (where, label) => {
+      const list = models.filter((m) => (where === 'cloud' ? isCloud(m.name) : !isCloud(m.name)));
+      if (!list.length) return '';
+      return `<optgroup label="${label}">` +
+        list.map((m) => `<option value="${esc(m.name)}">${esc(modelLabel(m))}</option>`).join('') +
+        '</optgroup>';
+    };
+    const opts = group('local', 'On your machine') + group('cloud', 'Cloud · billed per word');
     $('modelSelect').innerHTML = opts;
     $('set-model').innerHTML = opts;
-    // Prefer the saved default, then whatever this browser last used.
+
+    // Prefer the saved default, then whatever this browser last used, and only
+    // fall back to a cloud model if there's nothing local.
     const preferred = state.settings?.defaultModel || state.model;
-    if (!models.find((m) => m.name === preferred)) state.model = models[0]?.name || '';
-    else state.model = preferred;
+    if (!models.find((m) => m.name === preferred)) {
+      state.model = (models.find((m) => !isCloud(m.name)) || models[0])?.name || '';
+    } else state.model = preferred;
     $('modelSelect').value = state.model;
     $('set-model').value = state.model;
+
+    if (errors?.cloud) toast('Cloud provider: ' + errors.cloud, 'err');
   } catch (e) { toast('Could not list models: ' + e.message, 'err'); }
 }
 
@@ -177,21 +203,76 @@ function openSettings() {
   }
   $('set-bible').checked = s.context.includeBible;
   $('set-summary').checked = s.context.includeSummary;
+  $('set-autosummary').checked = s.context.autoSummary;
   $('set-spell').checked = s.editor.spellcheck;
   $('set-model').value = s.defaultModel || state.model;
+  renderCloudSettings();
+  renderVoiceSettings();
   renderConn();
   $('settingsModal').hidden = false;
+}
+
+async function renderVoiceSettings() {
+  const v = vset();
+  $('set-speak-questions').checked = !!v.speakQuestions;
+  $('set-fix-names').checked = v.fixNames !== false;
+  $('set-rate').value = v.rate ?? 1;
+  $('out-rate').textContent = (+(v.rate ?? 1)).toFixed(2) + '×';
+
+  const voices = await voice.localVoices();
+  const sel = $('set-voice');
+  sel.innerHTML = voices.length
+    ? voices.map((x) => `<option value="${esc(x.voiceURI)}">${esc(x.name)} — ${esc(x.lang)}</option>`).join('')
+    : '<option value="">No on-device voices found</option>';
+  sel.value = v.voiceURI || voices[0]?.voiceURI || '';
+  sel.disabled = !voices.length;
+
+  const st = state.listen;
+  $('voiceStatus').innerHTML = voices.length
+    ? `Reading: <span class="ok">● ${voices.length} on-device voice${voices.length === 1 ? '' : 's'}</span><br>
+       Dictation: ${st === 'ready'
+        ? '<span class="ok">● on-device, ready</span>'
+        : `<span class="bad">● unavailable</span> — ${esc(LISTEN_MESSAGE[st] || '')}`}`
+    : 'No on-device voices are installed. Your operating system\'s accessibility settings can add some.';
 }
 
 async function renderConn() {
   try {
     const h = await api('/health');
-    $('connInfo').innerHTML = `Ollama host <b>${esc(h.host)}</b><br>
+    const local = state.models.filter((m) => !isCloud(m.name)).length;
+    $('connInfo').innerHTML = `Host <b>${esc(h.host)}</b><br>
       Status <span class="${h.ollama ? 'ok' : 'bad'}">${h.ollama ? '● connected' : '● not reachable'}</span><br>
-      Models available <b>${state.models.length}</b>`;
+      Models installed <b>${local}</b>` +
+      (h.ollama ? '' : `<br><span class="submeta">Start Ollama, then hit refresh. Nothing here costs anything.</span>`);
+    if (h.cloud?.enabled) {
+      $('cloudHint').innerHTML = h.cloud.ok
+        ? `<span class="ok">● key accepted</span> — cloud models appear in the picker under “Cloud”.`
+        : `<span class="bad">● the provider rejected that key</span> — check it and the base URL.`;
+    } else {
+      $('cloudHint').textContent = '';
+    }
   } catch {
     $('connInfo').textContent = 'Could not reach the Inkwell server.';
   }
+}
+
+// Cloud config lives entirely in the settings modal; local needs no setup.
+async function renderCloudSettings() {
+  const s = state.settings;
+  if (!state.cloudServices) {
+    try { state.cloudServices = (await api('/cloud/services')).services; }
+    catch { state.cloudServices = []; }
+  }
+  const sel = $('set-cloud-service');
+  sel.innerHTML = state.cloudServices
+    .map((x) => `<option value="${esc(x.id)}" title="${esc(x.hint)}">${esc(x.label)}</option>`).join('');
+  sel.value = s.cloud?.service || 'openai';
+  $('set-cloud-enabled').checked = !!s.cloud?.enabled;
+  $('set-cloud-base').value = s.cloud?.baseUrl || '';
+  $('set-cloud-base').placeholder = state.cloudServices.find((x) => x.id === sel.value)?.defaultBaseUrl || '';
+  // The server sends a mask, never the key itself.
+  $('set-cloud-key').value = s.cloud?.apiKey || '';
+  $('cloudBox').hidden = !s.cloud?.enabled;
 }
 
 function collectSettings() {
@@ -199,16 +280,33 @@ function collectSettings() {
   for (const [input, , group, key] of SET_FIELDS) s[group][key] = +$(input).value;
   s.context.includeBible = $('set-bible').checked;
   s.context.includeSummary = $('set-summary').checked;
+  s.context.autoSummary = $('set-autosummary').checked;
   s.editor.spellcheck = $('set-spell').checked;
   s.defaultModel = $('set-model').value;
+  s.voice = {
+    ...s.voice,
+    voiceURI: $('set-voice').value,
+    rate: +$('set-rate').value,
+    speakQuestions: $('set-speak-questions').checked,
+    fixNames: $('set-fix-names').checked,
+  };
+  s.cloud = {
+    enabled: $('set-cloud-enabled').checked,
+    service: $('set-cloud-service').value,
+    baseUrl: $('set-cloud-base').value.trim(),
+    // Unchanged means the masked value goes back; the server keeps what it has.
+    apiKey: $('set-cloud-key').value,
+  };
   return s;
 }
 
 async function saveSettings() {
   state.settings = await api('/settings', { method: 'PUT', body: collectSettings() });
   state.model = state.settings.defaultModel || state.model;
-  $('modelSelect').value = state.model;
   applySettings();
+  // Cloud config changes the model list, so rebuild it before closing.
+  await refreshProvider();
+  $('modelSelect').value = state.model;
   $('settingsModal').hidden = true;
   toast('Settings saved.', 'ok');
 }
@@ -222,10 +320,153 @@ async function resetSettings() {
 }
 
 // ============================================================
+//  VOICE
+// ============================================================
+// Everything here is on-device. Dictation refuses to run rather than fall back
+// to a browser's server-side recogniser — see public/voice.js for why.
+// Defaults merged here too: an older settings.json, or a settings fetch that
+// failed, shouldn't quietly turn features off while the UI says they're on.
+const VOICE_DEFAULTS = { voiceURI: '', rate: 1, lang: 'en-US', speakQuestions: false, fixNames: true };
+const vset = () => ({ ...VOICE_DEFAULTS, ...(state.settings?.voice || {}) });
+
+async function initVoice() {
+  // Reading aloud works nearly everywhere; dictation is the fussy half.
+  $('readAloudBtn').hidden = !voice.canSpeak();
+  $('speakQBtn').hidden = !voice.canSpeak();
+
+  state.listen = await voice.listenAvailability(vset().lang || 'en-US');
+  // Surfaced for diagnostics: "why is the mic button missing?" should be
+  // answerable without a debugger.
+  window.__listenState = state.listen;
+  renderMicState();
+}
+
+const LISTEN_MESSAGE = {
+  ready: '',
+  downloadable: 'One-time download needed for on-device speech.',
+  downloading: 'Downloading the speech model…',
+  'no-local': 'This browser can only transcribe on a server, so Inkwell won\'t use it. Chrome or Edge can do it on-device.',
+  unsupported: 'This browser has no speech recognition. Chrome or Edge can transcribe on-device.',
+};
+
+function renderMicState() {
+  const btn = $('micBtn');
+  const note = $('voiceNote');
+  if (!btn) return;
+  const st = state.listen;
+  btn.hidden = st === 'unsupported' || st === 'no-local';
+  note.textContent = st === 'ready' ? '' : (LISTEN_MESSAGE[st] || '');
+  note.className = 'voicenote' + (st === 'ready' ? '' : ' warn');
+
+  if (st === 'downloadable') {
+    btn.hidden = false;
+    $('micLabel').textContent = 'Enable speech';
+    btn.classList.remove('on');
+  } else if (st === 'downloading') {
+    btn.hidden = false;
+    btn.disabled = true;
+    $('micLabel').textContent = 'Downloading…';
+  } else {
+    btn.disabled = false;
+    $('micLabel').textContent = voice.isListening() ? 'Stop' : 'Speak';
+    btn.classList.toggle('on', voice.isListening());
+  }
+}
+
+let dictationBase = '';
+
+async function toggleMic() {
+  if (voice.isListening()) { voice.stopListening(); return; }
+
+  if (state.listen === 'downloadable') {
+    state.listen = 'downloading';
+    renderMicState();
+    const ok = await voice.installLocalRecognition(vset().lang || 'en-US');
+    state.listen = ok ? 'ready' : 'no-local';
+    renderMicState();
+    if (!ok) toast('Could not install on-device speech.', 'err');
+    return;
+  }
+  if (state.listen !== 'ready') return;
+
+  const box = $('answerInput');
+  dictationBase = box.value ? box.value.replace(/\s*$/, ' ') : '';
+  $('nameFixes').hidden = true;
+
+  const ok = await voice.startListening({
+    lang: vset().lang || 'en-US',
+    onInterim: (t) => { box.value = dictationBase + t; },
+    onFinal: (t) => { box.value = dictationBase + t; },
+    onEnd: (t) => {
+      box.value = applyNameFixes(dictationBase + t);
+      box.focus();
+      renderMicState();
+    },
+    onError: (e) => {
+      toast(LISTEN_MESSAGE[e] || ('Dictation stopped: ' + e), 'err');
+      renderMicState();
+    },
+  });
+  if (ok) renderMicState();
+}
+
+// Put the book's proper nouns right, and show what changed so a wrong guess is
+// visible rather than silently baked into the answer.
+function applyNameFixes(text) {
+  if (!vset().fixNames || !state.book) return text;
+  const names = voice.bibleNames(state.book.bible || {});
+  window.__names = names;
+  const { text: fixed, fixes } = voice.correctNames(text, names);
+  const box = $('nameFixes');
+  if (fixes.length) {
+    box.innerHTML = `Corrected from your story bible: ` +
+      fixes.map((f) => `<b>${esc(f.from)} → ${esc(f.to)}</b>`).join(', ') +
+      ` <button class="linkbtn" id="undoNames">undo</button>`;
+    box.hidden = false;
+    $('undoNames').onclick = () => { $('answerInput').value = text; box.hidden = true; };
+  } else {
+    box.hidden = true;
+  }
+  return fixed;
+}
+
+function speakText(text) {
+  if (!text?.trim()) return;
+  voice.speak(text, { voiceURI: vset().voiceURI, rate: vset().rate ?? 1 });
+}
+
+// Read the chapter — or just the selection — aloud, moving the editor's own
+// selection along with it so you can see where you are.
+function readAloud() {
+  const ed = $('editor');
+  if (voice.isSpeaking()) { voice.stopSpeaking(); $('readAloudBtn').textContent = '🔊 Read this aloud'; return; }
+
+  const from = ed.selectionStart, to = ed.selectionEnd;
+  const whole = ed.value;
+  const hasSel = to > from;
+  const text = hasSel ? whole.slice(from, to) : whole;
+  const offset = hasSel ? from : 0;
+  if (!text.trim()) return toast('Nothing to read yet.', 'err');
+
+  $('readAloudBtn').textContent = '■ Stop reading';
+  ed.focus();
+  voice.speak(text, {
+    voiceURI: vset().voiceURI,
+    rate: vset().rate ?? 1,
+    onChunk: (c) => ed.setSelectionRange(offset + c.start, offset + c.end),
+    onEnd: () => { $('readAloudBtn').textContent = '🔊 Read this aloud'; ed.setSelectionRange(from, hasSel ? to : from); },
+    onStop: () => { $('readAloudBtn').textContent = '🔊 Read this aloud'; },
+    onError: (e) => { toast('Could not read aloud: ' + e, 'err'); },
+  });
+}
+
+// ============================================================
 //  ROUTER
 // ============================================================
 function go(view) {
   if (view !== 'home' && !state.book) view = 'home';
+  // Leaving the editor is the natural moment to update the book's memory.
+  if (state.view === 'write' && view !== 'write') foldOnLeave(state.chapterId);
   state.view = view;
   els('.view').forEach((v) => (v.hidden = true));
   $('view-' + view).hidden = false;
@@ -521,6 +762,13 @@ function initDrag() {
 // ============================================================
 //  INTERVIEW (context panel)
 // ============================================================
+// The question currently waiting for an answer, if any.
+function pendingQuestion() {
+  const msgs = state.book?.plan?.messages || [];
+  const last = msgs.at(-1);
+  return last?.role === 'assistant' ? last.content : '';
+}
+
 function transcriptPairs() {
   const msgs = state.book?.plan?.messages || [];
   const out = [];
@@ -544,6 +792,15 @@ function renderContext() {
 
   const pending = msgs.length > 0 && msgs.at(-1).role === 'assistant';
   $('answerBox').hidden = !pending;
+  $('speakQBtn').hidden = !pending || !voice.canSpeak();
+
+  // Read a newly-arrived question aloud, once, if you've asked for that.
+  const q = pendingQuestion();
+  if (pending && q && vset().speakQuestions && q !== state.spokenQuestion) {
+    state.spokenQuestion = q;
+    speakText(q);
+  }
+  if (pending) renderMicState();
   $('suggestQ').hidden = pending || !plan.suggested?.question;
   if (plan.suggested?.question) $('sqText').textContent = plan.suggested.question;
   const showStart = !pending && !plan.suggested?.question;
@@ -565,7 +822,14 @@ function renderMemory() {
   $('memList').innerHTML = rows.map(([k, v, c]) =>
     `<div class="memrow"><span class="mi" style="background:${c}22;color:${c}">◆</span>
      <span class="mk">${k}</span><span class="mv">${v}</span></div>`).join('');
-  $('memWhen').textContent = 'Last updated just now';
+
+  // Say something true about the running summary rather than "just now".
+  const { written, folded } = memoryCoverage();
+  setMemoryStatus(
+    !written ? 'nothing written yet'
+      : folded >= written ? `${written} chapter${written === 1 ? '' : 's'} folded in`
+        : `${folded}/${written} chapters folded in`
+  );
 }
 
 function renderBiblePeek() {
@@ -919,6 +1183,104 @@ async function addChapter() {
   state.view === 'outline' ? renderOutline() : renderWrite();
 }
 
+// ============================================================
+//  RUNNING MEMORY
+// ============================================================
+// The whole-book layer of the context engine is a running "story so far".
+// Nothing keeps it current unless we fold finished chapters into it, so when
+// you leave a chapter you've meaningfully added to, that chapter gets summarised
+// and merged. One model call, in the background, never blocking the editor.
+const FOLD_MIN_WORDS = 120;      // too short to be worth summarising
+const FOLD_GROWTH = 200;         // new words needed before we re-fold a chapter
+
+const foldable = (ch) => {
+  const w = wc(ch?.content);
+  return w >= FOLD_MIN_WORDS && w - (ch.summarizedWords || 0) >= FOLD_GROWTH;
+};
+
+function setMemoryStatus(text) {
+  const el = $('memWhen');
+  if (el) el.textContent = text;
+}
+
+// How much of the written book the running summary actually covers.
+function memoryCoverage() {
+  const written = chapters().filter((c) => wc(c.content) >= FOLD_MIN_WORDS);
+  const folded = written.filter((c) => (c.summarizedWords || 0) >= wc(c.content) - FOLD_GROWTH);
+  return { written: written.length, folded: folded.length };
+}
+
+let folding = false;
+
+async function foldChapter(ch, { force = false } = {}) {
+  if (!ch || !state.book || folding) return false;
+  if (!force && !foldable(ch)) return false;
+  if (wc(ch.content) < FOLD_MIN_WORDS) return false;
+  if (!state.model || !modelInstalled(state.model)) return false;
+
+  folding = true;
+  setMemoryStatus('folding in ' + (ch.title || 'chapter') + '…');
+  try {
+    const data = await api('/summary', {
+      method: 'POST',
+      body: {
+        model: state.model,
+        previousSummary: state.book.bible.runningSummary || '',
+        newChapterTitle: ch.title,
+        newChapterText: ch.content,
+      },
+    });
+    if (!data.summary) throw new Error('empty summary');
+
+    // Re-read the bible first: the author may have edited it while this ran.
+    state.book.bible = { ...state.book.bible, runningSummary: data.summary };
+    await api(`/books/${state.book.meta.id}/bible`, { method: 'PUT', body: state.book.bible });
+
+    ch.summarizedWords = wc(ch.content);
+    await api(`/books/${state.book.meta.id}/outline`, {
+      method: 'PUT',
+      body: { acts: acts(), chapters: chapters().map(stripContent) },
+    });
+
+    if (state.view === 'bible') $('bi-summary').value = state.book.bible.runningSummary;
+    renderMemory();
+    return true;
+  } catch (e) {
+    console.warn('Could not fold chapter into memory:', e.message);
+    renderMemory();
+    return false;
+  } finally {
+    folding = false;
+  }
+}
+
+// Called when you move away from a chapter you were writing in.
+function foldOnLeave(chapterId) {
+  if (!state.settings?.context?.autoSummary) return;
+  const ch = chapters().find((c) => c.id === chapterId);
+  if (foldable(ch)) foldChapter(ch);
+}
+
+// Catch-up pass for a book written before any of this existed, or after
+// auto-fold was switched off.
+async function foldEverything() {
+  const btn = $('foldMemoryBtn');
+  const pending = chapters().filter((c) => wc(c.content) >= FOLD_MIN_WORDS && (c.summarizedWords || 0) < wc(c.content));
+  if (!pending.length) return toast('Memory is already up to date.', 'ok');
+  if (!ensureModel('outlineErr', foldEverything)) return toast('Pick an installed model first.', 'err');
+
+  btn.disabled = true;
+  let done = 0;
+  for (const ch of pending) {
+    btn.innerHTML = `<span class="spin"></span> Folding in ${done + 1} of ${pending.length}…`;
+    if (await foldChapter(ch, { force: true })) done++;
+  }
+  btn.disabled = false;
+  btn.textContent = '↻ Fold in written chapters';
+  $('bi-summary').value = state.book.bible.runningSummary || '';
+  toast(done ? `Folded ${done} chapter${done === 1 ? '' : 's'} into memory.` : 'Nothing could be folded in.', done ? 'ok' : 'err');
+}
+
 // ---------- AI actions ----------
 let currentAbort = null;
 
@@ -1176,6 +1538,13 @@ function renderBible() {
   $('bi-tone').value = b.tone || '';
   $('bi-style').value = b.styleGuide || '';
   $('bi-summary').value = b.runningSummary || '';
+
+  const { written, folded } = memoryCoverage();
+  $('memCoverage').textContent = !written
+    ? 'No chapters long enough to summarise yet.'
+    : folded >= written
+      ? `Up to date — all ${written} written chapter${written === 1 ? '' : 's'} are in here.`
+      : `${written - folded} written chapter${written - folded === 1 ? '' : 's'} not folded in yet.`;
 }
 function renderEntries(id, arr, kind) {
   $(id).innerHTML = arr.map((e, i) => `<div class="entry" data-kind="${kind}" data-i="${i}">
@@ -1241,6 +1610,12 @@ function wire() {
   $('setSave').onclick = saveSettings;
   $('setReset').onclick = resetSettings;
   $('set-refresh').onclick = async () => { await refreshProvider(); renderConn(); toast('Models refreshed.'); };
+  $('set-cloud-enabled').addEventListener('change', (e) => { $('cloudBox').hidden = !e.target.checked; });
+  $('set-cloud-service').addEventListener('change', (e) => {
+    const svc = state.cloudServices?.find((x) => x.id === e.target.value);
+    $('set-cloud-base').placeholder = svc?.defaultBaseUrl || '';
+    if (!$('set-cloud-base').value.trim()) $('set-cloud-base').value = '';
+  });
   $('settingsModal').onclick = (e) => { if (e.target.id === 'settingsModal') $('settingsModal').hidden = true; };
   // live-preview every slider as it moves
   for (const [input, output, group, key, fmt] of SET_FIELDS) {
@@ -1315,6 +1690,7 @@ function wire() {
   $('chapterList').onclick = (e) => {
     const row = e.target.closest('[data-ch]');
     if (!row) return;
+    if (row.dataset.ch !== state.chapterId) foldOnLeave(state.chapterId);
     state.chapterId = row.dataset.ch;
     renderChapterRail();
     // Reading pages? Stay there and turn to that chapter.
@@ -1370,10 +1746,29 @@ function wire() {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); sendAnswer(); }
   });
   $('resumeBtn').onclick = () => { $('transcript').scrollTop = $('transcript').scrollHeight; $('answerInput')?.focus(); };
+
+  // voice
+  $('micBtn').onclick = toggleMic;
+  $('speakQBtn').onclick = () => {
+    if (voice.isSpeaking()) return voice.stopSpeaking();
+    speakText(pendingQuestion());
+  };
+  $('readAloudBtn').onclick = readAloud;
+  $('set-rate').addEventListener('input', (e) => ($('out-rate').textContent = (+e.target.value).toFixed(2) + '×'));
+  // Typing or clicking in the editor cancels playback — the selection is about
+  // to be yours again.
+  $('editor').addEventListener('keydown', () => { if (voice.isSpeaking()) voice.stopSpeaking(); });
+  $('editor').addEventListener('mousedown', () => { if (voice.isSpeaking()) voice.stopSpeaking(); });
   $('openBibleBtn').onclick = () => go('bible');
 
   // write
-  $('editor').addEventListener('input', () => { updateWordcount(); saveChapterDebounced(); updateSelInfo(); });
+  $('editor').addEventListener('input', () => {
+    // Keep the in-memory chapter current immediately; the network save is the
+    // part that waits. Otherwise leaving a chapter can fold in stale text.
+    const ch = currentChapter();
+    if (ch) ch.content = $('editor').value;
+    updateWordcount(); saveChapterDebounced(); updateSelInfo();
+  });
   ['select','mouseup','keyup','focus'].forEach((ev) => $('editor').addEventListener(ev, updateSelInfo));
   $('ed-chapter-title').addEventListener('input', saveChapterDebounced);
   els('[data-action]').forEach((b) => (b.onclick = () => runAI(b.dataset.action)));
@@ -1415,6 +1810,7 @@ function wire() {
     }
   });
   $('saveBibleBtn').onclick = saveBible;
+  $('foldMemoryBtn').onclick = foldEverything;
 
   // notes
   $('notesPad').addEventListener('input', debounce(async () => {

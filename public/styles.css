@@ -414,6 +414,10 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--v
   border-radius: 6px; padding: 7px 9px; font-size: 13px; width: 100%;
   margin-top: 6px; font-family: inherit;
 }
+.memrow-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-top: 8px;
+}
 .entry .ename { font-weight: 600; }
 .entry .remove { position: absolute; top: 8px; right: 8px; }
 
@@ -436,6 +440,37 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--v
   border-radius: 8px; padding: 9px 11px; font-size: 12.5px; resize: vertical; font-family: inherit;
 }
 #answerInput:focus { outline: none; border-color: var(--violet); }
+/* ---------- voice ---------- */
+.voicerow { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.voicerow .btn { margin-left: auto; }
+.micbtn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: #0c0e14; border: 1px solid var(--line); color: var(--ink-dim);
+  border-radius: 9px; padding: 7px 12px; font-size: 12.5px; cursor: pointer;
+  font-family: inherit;
+}
+.micbtn svg { width: 15px; height: 15px; fill: none; }
+.micbtn:hover { color: var(--ink); border-color: #3a4154; }
+.micbtn:disabled { opacity: .55; cursor: default; }
+/* Listening is a live microphone — it should be impossible to miss. */
+.micbtn.on {
+  background: rgba(229,117,123,.14); border-color: var(--bad); color: #ffc9cc;
+  animation: micpulse 1.6s ease-in-out infinite;
+}
+@keyframes micpulse { 50% { box-shadow: 0 0 0 4px rgba(229,117,123,.14); } }
+@media (prefers-reduced-motion: reduce) { .micbtn.on { animation: none; } }
+.voicenote { font-size: 11px; color: var(--ink-faint); line-height: 1.4; flex: 1 1 100%; }
+.voicenote.warn { color: var(--amber); }
+.namefixes {
+  margin-top: 8px; font-size: 11.5px; color: var(--ink-dim); line-height: 1.5;
+  background: rgba(210,173,99,.07); border: 1px solid rgba(210,173,99,.3);
+  border-radius: 8px; padding: 7px 10px;
+}
+.namefixes b { color: var(--gold); font-weight: 600; }
+.voicestatus { font-size: 12.5px; color: var(--ink-dim); line-height: 1.7; margin-top: 12px; }
+.voicestatus .ok { color: var(--green); }
+.voicestatus .bad { color: var(--bad); }
+
 .suggestq { margin-top: 12px; }
 .sq-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-faint); font-weight: 600; margin-bottom: 7px; }
 .sq-card { background: rgba(210,173,99,.07); border: 1px solid rgba(210,173,99,.4); border-radius: var(--r); padding: 11px; }
@@ -521,6 +556,23 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--v
   color: var(--ink-dim); margin: 10px 0; cursor: pointer;
 }
 .setcheck input { accent-color: var(--violet); width: 15px; height: 15px; }
+/* Where-the-model-runs cards. The local one is visually the destination; the
+   cloud one is deliberately quieter. */
+.runcard { border-radius: 10px; padding: 14px 16px; margin: 12px 0; border: 1px solid var(--line); }
+.runcard.primary { border-color: rgba(87,201,138,.4); background: rgba(87,201,138,.05); }
+.runcard.secondary { background: #0c0e14; }
+.runcard-head { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.runcard-title { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.runcard-badge {
+  font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
+  color: var(--green); border: 1px solid rgba(87,201,138,.45); border-radius: 999px; padding: 2px 8px;
+}
+.cloudhint { font-size: 12px; color: var(--ink-dim); margin-top: 10px; line-height: 1.5; }
+.cloudhint .ok { color: var(--green); }
+.cloudhint .bad { color: var(--bad); }
+.health.cloud { color: var(--amber); }
+#modelSelect optgroup { background: var(--panel); color: var(--ink-faint); font-style: normal; }
+
 .conn { font-size: 12.5px; color: var(--ink-dim); line-height: 1.7; margin-bottom: 12px; }
 .conn b { color: var(--ink); font-weight: 600; }
 .conn .ok { color: var(--green); }
