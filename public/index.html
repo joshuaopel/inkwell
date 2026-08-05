@@ -163,6 +163,7 @@
           <aside class="aipanel">
             <div class="ai-actions">
               <div class="selinfo" id="selInfo">Select a passage to revise it</div>
+              <button class="btn ghost block" id="readAloudBtn" hidden>🔊 Read this aloud</button>
               <button class="btn primary block" data-action="continue">✍️ Continue writing</button>
               <button class="btn notes block" id="reviseBtn">📝 Revise with notes…</button>
               <div class="row">
@@ -304,12 +305,24 @@
       <!-- ---------- CONTEXT PANEL ---------- -->
       <aside class="context" id="context">
         <div class="ctxcard">
-          <div class="ctxhead"><h3>Interview / Prompts</h3><button class="chipbtn" id="resumeBtn">▤ Resume</button></div>
+          <div class="ctxhead">
+          <h3>Interview / Prompts</h3>
+          <button class="chipbtn" id="speakQBtn" title="Read the question aloud" hidden>🔊 Read</button>
+          <button class="chipbtn" id="resumeBtn">▤ Resume</button>
+        </div>
           <div class="transcript" id="transcript"></div>
 
           <div class="answerbox" id="answerBox" hidden>
             <textarea id="answerInput" rows="3" placeholder="Your answer…"></textarea>
-            <button class="btn primary block" id="answerSend">Answer →</button>
+            <div class="voicerow">
+              <button class="micbtn" id="micBtn" title="Answer out loud" aria-label="Answer out loud" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
+                <span id="micLabel">Speak</span>
+              </button>
+              <span class="voicenote" id="voiceNote"></span>
+              <button class="btn primary" id="answerSend">Answer →</button>
+            </div>
+            <div class="namefixes" id="nameFixes" hidden></div>
           </div>
 
           <div class="suggestq" id="suggestQ" hidden>
@@ -427,6 +440,18 @@
         <div class="setrow slider"><span>Line height</span><input type="range" id="set-lh" min="1.3" max="2.2" step="0.02"><output id="out-lh"></output></div>
         <div class="setrow slider"><span>Line width <em>(characters)</em></span><input type="range" id="set-measure" min="45" max="110" step="1"><output id="out-measure"></output></div>
         <label class="setcheck"><input type="checkbox" id="set-spell"> Spellcheck while writing</label>
+      </section>
+
+      <section class="setsec">
+        <h3>Voice</h3>
+        <p class="sethint">Both directions stay on your machine. Inkwell only uses voices your system provides, and only dictates when your browser can transcribe on-device — it will never send your voice to a server to do it.</p>
+        <label class="setrow">Reading voice
+          <select id="set-voice"></select>
+        </label>
+        <div class="setrow slider"><span>Reading speed</span><input type="range" id="set-rate" min="0.6" max="1.6" step="0.05"><output id="out-rate"></output></div>
+        <label class="setcheck"><input type="checkbox" id="set-speak-questions"> Read interview questions aloud as they arrive</label>
+        <label class="setcheck"><input type="checkbox" id="set-fix-names"> Correct character and place names in dictation, using the story bible</label>
+        <div class="voicestatus" id="voiceStatus"></div>
       </section>
 
       <section class="setsec">

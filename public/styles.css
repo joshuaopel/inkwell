@@ -440,6 +440,37 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--v
   border-radius: 8px; padding: 9px 11px; font-size: 12.5px; resize: vertical; font-family: inherit;
 }
 #answerInput:focus { outline: none; border-color: var(--violet); }
+/* ---------- voice ---------- */
+.voicerow { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.voicerow .btn { margin-left: auto; }
+.micbtn {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: #0c0e14; border: 1px solid var(--line); color: var(--ink-dim);
+  border-radius: 9px; padding: 7px 12px; font-size: 12.5px; cursor: pointer;
+  font-family: inherit;
+}
+.micbtn svg { width: 15px; height: 15px; fill: none; }
+.micbtn:hover { color: var(--ink); border-color: #3a4154; }
+.micbtn:disabled { opacity: .55; cursor: default; }
+/* Listening is a live microphone — it should be impossible to miss. */
+.micbtn.on {
+  background: rgba(229,117,123,.14); border-color: var(--bad); color: #ffc9cc;
+  animation: micpulse 1.6s ease-in-out infinite;
+}
+@keyframes micpulse { 50% { box-shadow: 0 0 0 4px rgba(229,117,123,.14); } }
+@media (prefers-reduced-motion: reduce) { .micbtn.on { animation: none; } }
+.voicenote { font-size: 11px; color: var(--ink-faint); line-height: 1.4; flex: 1 1 100%; }
+.voicenote.warn { color: var(--amber); }
+.namefixes {
+  margin-top: 8px; font-size: 11.5px; color: var(--ink-dim); line-height: 1.5;
+  background: rgba(210,173,99,.07); border: 1px solid rgba(210,173,99,.3);
+  border-radius: 8px; padding: 7px 10px;
+}
+.namefixes b { color: var(--gold); font-weight: 600; }
+.voicestatus { font-size: 12.5px; color: var(--ink-dim); line-height: 1.7; margin-top: 12px; }
+.voicestatus .ok { color: var(--green); }
+.voicestatus .bad { color: var(--bad); }
+
 .suggestq { margin-top: 12px; }
 .sq-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em; color: var(--ink-faint); font-weight: 600; margin-bottom: 7px; }
 .sq-card { background: rgba(210,173,99,.07); border: 1px solid rgba(210,173,99,.4); border-radius: var(--r); padding: 11px; }

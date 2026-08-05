@@ -42,6 +42,14 @@ Built as a smarter, personal alternative to Sudowrite. The difference is the
   outline with a **before/after preview** (new / moved / kept chapters colour-coded).
   Or **Rebuild from interview** to fold newer answers into the whole plan. Both preserve
   any chapters you've already written.
+- **Talk to it, out loud** — answer interview questions by speaking instead of typing, which
+  is where thin answers come from. The transcript lands in the box as editable text, and gets
+  checked against your story bible so *"Marin Veil in Sable Port"* becomes **Maren Vale in
+  Sableport** — matched on sound, not spelling, with every correction shown and undoable.
+  Inkwell also **reads your prose back to you**, tracking the selection as it goes, which is
+  the fastest way to hear a clunky sentence. Both directions are on-device only: it uses your
+  system's local voices, and it refuses to dictate at all rather than stream your voice to
+  someone's server.
 - **Pages — see the printed book** — every chapter laid out as real pages at a real
   trim size, paginated by the browser itself, so what you see is what prints. Choose the
   trim (5×8 up to 8.5×11), the margins, the typeface, the size and leading, justification,
@@ -226,6 +234,11 @@ folder (not in browser storage, so it survives cache clears):
 - **Editor** — font size, line height, line width (in characters), spellcheck.
   Sliders preview live as you drag them.
 - **Connection** — Ollama host, status, and a model refresh.
+
+- **Voice** — which on-device voice reads to you, how fast, whether interview questions are
+  read automatically, and whether dictation is corrected against the story bible. Dictation
+  needs a browser that can transcribe on-device (Chrome or Edge today); reading aloud works
+  everywhere. Inkwell will tell you which you've got.
 
 Page design is per-book rather than global, and lives in the Pages tab.
 
