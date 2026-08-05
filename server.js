@@ -5,7 +5,7 @@ import { Readable } from 'node:stream';
 
 import os from 'node:os';
 
-import { providerFor, cloudProvider, cloudConfigured, ollama, OLLAMA_HOST, CLOUD_SERVICES, CLOUD_PREFIX } from './lib/ollama.js';
+import { providerFor, cloudProvider, cloudConfigured, ollama, ollamaDiagnose, OLLAMA_HOST, CLOUD_SERVICES, CLOUD_PREFIX } from './lib/ollama.js';
 import * as store from './lib/store.js';
 import { systemPrompt, buildWriteMessages } from './lib/context.js';
 import { interviewMessages, outlineMessages, bibleSeedMessages, summaryMessages, nextQuestionMessages, refineOutlineMessages, designMessages } from './lib/prompts.js';
@@ -79,10 +79,11 @@ const P = async (model) => providerFor(model, await store.getSettings());
 // ---- Provider / health ----
 app.get('/api/health', asyncH(async (_req, res) => {
   const settings = await store.getSettings();
-  const ok = await ollama.health();
+  const local = await ollamaDiagnose();
   const cloud = cloudConfigured(settings);
   res.json({
-    ollama: ok,
+    ollama: local.ok,
+    reason: local.reason || '',
     host: OLLAMA_HOST,
     cloud: cloud ? { enabled: true, service: settings.cloud.service, ok: await cloudProvider(settings).health() } : { enabled: false },
   });

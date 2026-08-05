@@ -1352,7 +1352,17 @@ npm start</pre>
             <tr>
               <td>“Ollama not running”, red dot</td>
               <td>Nothing is listening on 11434.</td>
-              <td>Start the Ollama app, or <code>ollama serve</code> in a terminal.</td>
+              <td>Start the Ollama app, or <code>ollama serve</code> in a terminal. Settings → Connection now tells you exactly what failed.</td>
+            </tr>
+            <tr>
+              <td>Ollama <em>is</em> running — the browser can reach it, Inkwell can't</td>
+              <td>Almost always Windows. Node resolves <code>localhost</code> to the IPv6 address first, while Ollama is listening only on IPv4.</td>
+              <td>Connect by address: <code>set OLLAMA_HOST=http://127.0.0.1:11434</code> before <code>npm start</code>. Recent Inkwell does this for you.</td>
+            </tr>
+            <tr>
+              <td>Worked until you exposed Ollama on your network</td>
+              <td><code>OLLAMA_HOST</code> is Ollama's own variable, where it means <em>what to bind to</em>. Setting it to <code>0.0.0.0</code> also tells Inkwell to <em>connect</em> to 0.0.0.0, which isn't an address.</td>
+              <td>Recent Inkwell rewrites that to 127.0.0.1 automatically. Otherwise set it per-command rather than system-wide.</td>
             </tr>
             <tr>
               <td>Empty outline, or “returned an empty structure”</td>
