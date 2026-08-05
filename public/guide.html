@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#07080c" />
+<title>The Inkwell Guide — how it works, and how to set it up</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖋️</text></svg>" />
+<style>
+/* ============================================================
+   The Inkwell Guide.
+   Single visual world on purpose: this page ships inside a
+   dark studio and is served from it offline, so it commits to
+   that ground rather than following the viewer's theme. Type is
+   system stacks only — no webfonts — because the app has to work
+   with the network unplugged.
+   ============================================================ */
+:root {
+  --void: #07080c;
+  --ground: #0b0d13;
+  --panel: #10131b;
+  --panel-2: #161a24;
+  --line: #232838;
+  --line-soft: #191d27;
+  --ink: #e8eaf2;
+  --dim: #99a1b5;
+  --faint: #616a7e;
+  --gold: #d2ad63;
+  --gold-lit: #f0dba6;
+  --violet: #8b7cf8;
+  --teal: #46c5bd;
+  --green: #57c98a;
+  --rose: #e5757b;
+  --paper: #f6f2e8;
+  --paper-ink: #221f1a;
+  --paper-accent: #8a6a3b;
+
+  --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; background: var(--void); color-scheme: dark; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  background: var(--void);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.72;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- layout ---------- */
+.shell { max-width: 1180px; margin-inline: auto; padding: 0 22px; }
+.layout { display: block; }
+@media (min-width: 1040px) {
+  .layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 56px; align-items: start; }
+}
+main { min-width: 0; }
+.col { max-width: 68ch; }
+
+/* ---------- contents rail ---------- */
+.rail { display: none; }
+@media (min-width: 1040px) {
+  .rail {
+    display: block; position: sticky; top: 0; padding: 96px 0 40px;
+    max-height: 100vh; overflow-y: auto;
+  }
+}
+.rail-title {
+  font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--faint); font-weight: 700; margin-bottom: 14px;
+}
+.rail a {
+  display: block; padding: 5px 0 5px 13px; margin-left: -1px;
+  border-left: 1px solid var(--line-soft);
+  color: var(--dim); text-decoration: none; font-size: 13.5px; line-height: 1.4;
+}
+.rail a:hover { color: var(--ink); border-left-color: var(--gold); }
+.rail a.spot { color: var(--gold); }
+.rail a:focus-visible, a:focus-visible, button:focus-visible, input:focus-visible {
+  outline: 2px solid var(--violet); outline-offset: 2px; border-radius: 3px;
+}
+
+/* ---------- hero ---------- */
+.hero { padding: 74px 0 34px; }
+.mark { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; }
+.mark svg { width: 30px; height: 30px; color: var(--gold); flex: none; }
+.mark b { font-family: var(--serif); font-size: 21px; font-weight: 600; letter-spacing: .01em; }
+.mark span {
+  margin-left: auto; font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--faint); font-weight: 600;
+}
+.hero h1 {
+  font-family: var(--serif); font-weight: 600;
+  font-size: clamp(2.6rem, 6.4vw, 4.3rem); line-height: 1.02;
+  letter-spacing: -.015em; margin: 0 0 22px; text-wrap: balance;
+}
+.hero h1 em { font-style: italic; color: var(--gold); }
+.lede { font-size: clamp(1.06rem, 2vw, 1.28rem); color: var(--dim); max-width: 60ch; margin: 0; }
+.lede strong { color: var(--ink); font-weight: 600; }
+
+.hero-facts {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 30px; padding-bottom: 6px;
+}
+.fact {
+  border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px;
+  font-size: 13px; color: var(--dim); background: var(--panel);
+}
+.fact b { color: var(--gold); font-weight: 600; }
+
+/* ---------- sections ---------- */
+section { padding: 62px 0 0; scroll-margin-top: 24px; }
+.eyebrow {
+  font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--faint); font-weight: 700; margin: 0 0 12px;
+  display: flex; align-items: center; gap: 12px;
+}
+.eyebrow::after { content: ''; flex: 1; height: 1px; background: var(--line-soft); }
+h2 {
+  font-family: var(--serif); font-weight: 600; letter-spacing: -.01em;
+  font-size: clamp(1.75rem, 3.4vw, 2.35rem); line-height: 1.15;
+  margin: 0 0 18px; text-wrap: balance;
+}
+h3 {
+  font-family: var(--serif); font-size: 1.28rem; font-weight: 600;
+  margin: 38px 0 10px; letter-spacing: -.005em;
+}
+h4 {
+  font-size: 12px; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--gold); font-weight: 700; margin: 0 0 8px;
+}
+p { margin: 0 0 18px; }
+p.col, ul.col, ol.col { max-width: 68ch; }
+a { color: var(--gold); text-decoration-color: rgba(210,173,99,.35); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--gold); }
+strong { color: #fff; font-weight: 600; }
+em.q { color: var(--dim); font-style: italic; }
+code {
+  font-family: var(--mono); font-size: .86em; background: #0d1017;
+  border: 1px solid var(--line-soft); border-radius: 5px; padding: 1px 5px; color: var(--gold-lit);
+}
+ul, ol { margin: 0 0 18px; padding-left: 22px; }
+li { margin: 7px 0; }
+li::marker { color: var(--faint); }
+hr { border: none; border-top: 1px solid var(--line-soft); margin: 56px 0 0; }
+
+/* ---------- pull quote ---------- */
+.pull {
+  font-family: var(--serif); font-size: clamp(1.3rem, 2.6vw, 1.75rem); line-height: 1.4;
+  color: var(--gold-lit); border-left: 2px solid var(--gold); padding: 4px 0 4px 24px;
+  margin: 34px 0; max-width: 46ch; font-style: italic;
+}
+
+/* ---------- cards ---------- */
+.cards { display: grid; gap: 12px; margin: 26px 0; }
+@media (min-width: 720px) { .cards.two { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 860px) { .cards.three { grid-template-columns: repeat(3, 1fr); } }
+.card {
+  background: var(--panel); border: 1px solid var(--line-soft);
+  border-radius: 12px; padding: 18px 20px;
+}
+.card h5 {
+  margin: 0 0 6px; font-size: 15px; font-weight: 600; color: var(--ink);
+  font-family: var(--serif); font-size: 1.06rem;
+}
+.card p { margin: 0; font-size: 14.5px; color: var(--dim); line-height: 1.6; }
+.card.lit { border-color: rgba(210,173,99,.4); background: rgba(210,173,99,.05); }
+.card.lit h5 { color: var(--gold-lit); }
+
+/* ---------- figures ---------- */
+figure { margin: 32px 0; }
+figure svg { width: 100%; height: auto; display: block; color: var(--dim); }
+figcaption {
+  font-size: 13.5px; color: var(--faint); line-height: 1.55;
+  margin-top: 12px; padding-left: 14px; border-left: 1px solid var(--line-soft);
+  max-width: 62ch;
+}
+.diagram {
+  background: var(--ground); border: 1px solid var(--line-soft);
+  border-radius: 14px; padding: 22px 18px; overflow-x: auto;
+}
+.diagram svg { min-width: 540px; }
+
+/* ---------- paper specimen ---------- */
+.sheet {
+  background: var(--paper); color: var(--paper-ink);
+  border-radius: 3px; padding: 30px 34px 22px; margin: 26px 0;
+  font-family: var(--serif); line-height: 1.55; position: relative;
+  box-shadow: 0 20px 50px rgba(0,0,0,.5);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(120,90,40,.04) 0 1px, transparent 1px 3px);
+}
+.sheet .rh {
+  text-align: center; font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: rgba(34,31,26,.5); margin-bottom: 22px;
+}
+.sheet .onum {
+  text-align: center; font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--paper-accent); margin-bottom: 10px;
+}
+.sheet h6 {
+  text-align: center; font-size: 1.45rem; font-weight: 500; margin: 0 0 6px; font-family: var(--serif);
+}
+.sheet .orn { text-align: center; color: var(--paper-accent); margin-bottom: 18px; letter-spacing: .3em; }
+.sheet p { margin: 0; text-indent: 1.2em; text-align: justify; font-size: 15.5px; hyphens: auto; }
+.sheet p.first { text-indent: 0; }
+.sheet p.first::first-letter {
+  float: left; font-size: 3.1em; line-height: .78; padding: .04em .09em 0 0; color: var(--paper-accent);
+}
+.sheet .folio {
+  text-align: center; font-size: 11px; color: rgba(34,31,26,.45); margin-top: 20px;
+}
+
+/* ---------- chat specimen ---------- */
+.chat {
+  background: var(--panel); border: 1px solid var(--line-soft); border-radius: 12px;
+  padding: 16px; margin: 26px 0; display: flex; flex-direction: column; gap: 9px;
+}
+.bub { border-radius: 11px; padding: 11px 14px; font-size: 14.5px; line-height: 1.55; max-width: 92%; }
+.bub.ai { background: var(--panel-2); border: 1px solid var(--line-soft); color: var(--dim); }
+.bub.me {
+  background: rgba(139,124,248,.13); border: 1px solid rgba(139,124,248,.32);
+  color: #d6cfff; align-self: flex-end;
+}
+.bub .who {
+  display: block; font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--faint); margin-bottom: 5px; font-weight: 700;
+}
+.suggest {
+  background: rgba(210,173,99,.07); border: 1px solid rgba(210,173,99,.34);
+  border-radius: 11px; padding: 12px 14px; margin-top: 4px;
+}
+.suggest .lbl {
+  font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--faint); font-weight: 700; margin-bottom: 7px;
+}
+.suggest .qq { color: var(--gold); font-size: 14.5px; line-height: 1.5; margin-bottom: 11px; }
+.suggest .btns { display: flex; gap: 10px; align-items: center; }
+.pill {
+  border: 1px solid rgba(210,173,99,.5); background: rgba(210,173,99,.12); color: var(--gold);
+  border-radius: 8px; padding: 5px 12px; font-size: 12.5px; font-weight: 600;
+}
+.pill.plain { border-color: var(--line); background: none; color: var(--faint); font-weight: 500; }
+
+/* ---------- compare ---------- */
+.compare { display: grid; gap: 14px; margin: 26px 0; }
+@media (min-width: 760px) { .compare { grid-template-columns: 1fr 1fr; } }
+.ans {
+  border: 1px solid var(--line-soft); border-radius: 12px; overflow: hidden; background: var(--panel);
+}
+.ans .tag {
+  padding: 9px 16px; font-size: 11px; letter-spacing: .13em; text-transform: uppercase;
+  font-weight: 700; border-bottom: 1px solid var(--line-soft);
+}
+.ans.thin .tag { color: var(--faint); }
+.ans.thick .tag { color: var(--gold); background: rgba(210,173,99,.07); }
+.ans.thick { border-color: rgba(210,173,99,.35); }
+.ans .said { padding: 14px 16px; font-family: var(--serif); font-size: 15.5px; line-height: 1.55; color: var(--ink); }
+.ans .got {
+  padding: 12px 16px 15px; border-top: 1px dashed var(--line);
+  font-size: 13.5px; color: var(--dim); line-height: 1.55;
+}
+.ans .got b { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); margin-bottom: 5px; font-weight: 700; }
+
+/* ---------- chips ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 7px; margin: 18px 0 26px; }
+.chip {
+  border: 1px solid var(--line); border-radius: 999px; padding: 6px 13px;
+  font-size: 13px; color: var(--dim); background: var(--panel);
+}
+
+/* ---------- dial ---------- */
+.dial {
+  background: var(--panel); border: 1px solid var(--line-soft);
+  border-radius: 14px; padding: 20px 22px 22px; margin: 26px 0;
+}
+.dial-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+.dial-head b { font-family: var(--serif); font-size: 1.1rem; font-weight: 600; }
+.dial-head .val {
+  font-family: var(--mono); font-size: 13px; color: var(--gold);
+  font-variant-numeric: tabular-nums; margin-left: auto;
+}
+.dial-hint { font-size: 13.5px; color: var(--faint); margin: 0 0 16px; }
+.dial input[type=range] { width: 100%; accent-color: var(--gold); height: 4px; margin: 0 0 6px; }
+.scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); margin-bottom: 16px; }
+.sample {
+  background: var(--paper); color: var(--paper-ink); border-radius: 3px;
+  padding: 17px 20px; font-family: var(--serif); font-size: 15.5px; line-height: 1.6;
+}
+.sample .lbl {
+  display: block; font-family: var(--sans); font-size: 9.5px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--paper-accent); font-weight: 700; margin-bottom: 7px;
+}
+.dial .note { font-size: 12.5px; color: var(--faint); margin: 12px 0 0; }
+
+/* ---------- table ---------- */
+.tablewrap { overflow-x: auto; margin: 24px 0; border: 1px solid var(--line-soft); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 14.5px; }
+th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+th {
+  font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--faint); font-weight: 700; background: var(--panel);
+}
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+td b { color: var(--ink); }
+
+/* ---------- steps ---------- */
+.steps { counter-reset: step; list-style: none; padding: 0; margin: 26px 0; }
+.steps > li {
+  counter-increment: step; position: relative; padding-left: 52px; margin: 0 0 30px;
+}
+.steps > li::before {
+  content: counter(step); position: absolute; left: 0; top: -2px;
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid rgba(210,173,99,.45); background: rgba(210,173,99,.09);
+  color: var(--gold); font-size: 14px; font-weight: 700;
+  display: grid; place-items: center; font-variant-numeric: tabular-nums;
+}
+.steps h3 { margin: 0 0 6px; font-size: 1.14rem; }
+.steps p { margin: 0 0 10px; }
+
+/* ---------- code ---------- */
+pre {
+  background: #0c0f16; border: 1px solid var(--line); border-radius: 10px;
+  padding: 15px 17px; overflow-x: auto; margin: 16px 0;
+  font-family: var(--mono); font-size: 13px; line-height: 1.75; color: var(--ink);
+}
+pre .c { color: var(--faint); }
+pre .p { color: var(--gold); }
+
+/* ---------- callout ---------- */
+.note-box {
+  border: 1px solid var(--line); border-left: 2px solid var(--teal);
+  background: rgba(70,197,189,.05); border-radius: 0 10px 10px 0;
+  padding: 15px 18px; margin: 26px 0; font-size: 14.5px; color: var(--dim);
+}
+.note-box.warn { border-left-color: var(--rose); background: rgba(229,117,123,.05); }
+.note-box b { color: var(--ink); }
+.note-box p:last-child { margin-bottom: 0; }
+
+/* ---------- file tree ---------- */
+.tree {
+  font-family: var(--mono); font-size: 13px; line-height: 1.95;
+  background: var(--panel); border: 1px solid var(--line-soft);
+  border-radius: 12px; padding: 18px 20px; overflow-x: auto; margin: 24px 0;
+  color: var(--dim);
+}
+.tree b { color: var(--gold); font-weight: 500; }
+.tree i { color: var(--faint); font-style: normal; }
+
+/* ---------- footer ---------- */
+footer {
+  margin-top: 70px; padding: 34px 0 60px; border-top: 1px solid var(--line-soft);
+  color: var(--faint); font-size: 14px;
+}
+footer p { margin: 0 0 8px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+<div class="layout">
+
+  <nav class="rail" aria-label="Contents">
+    <div class="rail-title">The guide</div>
+    <a href="#free">Why it's free</a>
+    <a href="#machine">Where it runs</a>
+    <a href="#interview" class="spot">★ The interview</a>
+    <a href="#memory">How it remembers</a>
+    <a href="#pen">Who holds the pen</a>
+    <a href="#control">Controlling creativity</a>
+    <a href="#pages">Seeing the book</a>
+    <a href="#ollama">Setting up Ollama</a>
+    <a href="#phone">From your phone</a>
+    <a href="#first">Your first hour</a>
+    <a href="#files">Where work lives</a>
+  </nav>
+
+  <main>
+
+    <header class="hero">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20 3c-6 1-11 5-13 11l-2 5 5-2c6-2 9-7 10-13z"/><path d="M5 19c3-4 6-7 10-9"/>
+        </svg>
+        <b>Inkwell</b>
+        <span>The guide</span>
+      </div>
+
+      <h1>A writing studio that runs on <em>your</em> machine.</h1>
+
+      <p class="lede">
+        Inkwell plans, drafts, edits and typesets a novel using a model you downloaded and own.
+        <strong>No API keys. No per-word billing. No account.</strong> Your manuscript is a folder
+        of Markdown on your own disk, and nothing about it ever leaves the building.
+      </p>
+
+      <div class="hero-facts">
+        <span class="fact">Runs on <b>Ollama</b></span>
+        <span class="fact">Costs <b>electricity</b></span>
+        <span class="fact">Exports <b>KDP-ready EPUB</b></span>
+        <span class="fact">Works <b>offline</b></span>
+      </div>
+    </header>
+
+    <!-- ================= FREE ================= -->
+    <section id="free">
+      <p class="eyebrow">The deal</p>
+      <h2>It's free because charging you would have made it worse</h2>
+
+      <p class="col">
+        Every hosted writing tool has the same quiet problem: the thing you want (more drafts, longer
+        context, another pass over chapter nine) is the thing that costs the vendor money. So the
+        product grows a meter. You start rationing. You stop asking for the fifth revision that
+        would have been the good one.
+      </p>
+
+      <p class="col">
+        Inkwell removes the meter by removing the vendor. The model runs on hardware you already
+        paid for, so the marginal cost of one more attempt is a few seconds of fan noise. That
+        single decision is what makes the rest of the design possible — the interview can ask
+        twenty questions, the reviser can try again and again, the whole book can be re-outlined
+        on a whim, because none of it appears on a bill.
+      </p>
+
+      <p class="pull">The best feature of a local model isn't privacy. It's that you stop counting.</p>
+
+      <div class="cards three">
+        <div class="card">
+          <h5>Nothing to sign up for</h5>
+          <p>No key, no login, no seat. Clone it, <code>npm start</code>, done. There's no server of mine to go down or get bought.</p>
+        </div>
+        <div class="card">
+          <h5>Nothing phones home</h5>
+          <p>No telemetry, no analytics, no crash reporting. Unplug the network and the whole studio still works.</p>
+        </div>
+        <div class="card">
+          <h5>Nothing is locked in</h5>
+          <p>Your book is folders of Markdown and JSON. Open it in any editor, put it in git, back it up by copying it.</p>
+        </div>
+      </div>
+
+      <p class="col">
+        The trade is honest: you supply the compute. A laptop from the last few years will run a
+        model good enough to be genuinely useful, and a desktop with a real GPU will run one that's
+        better than useful. <a href="#ollama">The setup section</a> tells you exactly which to pull.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- ================= MACHINE ================= -->
+    <section id="machine">
+      <p class="eyebrow">The shape of it</p>
+      <h2>Three pieces, all on your desk</h2>
+
+      <p class="col">
+        Inkwell isn't an AI product with a model bolted on. It's scaffolding around a model —
+        prompts, context assembly, structure, and a UI that keeps you in charge of every word.
+        Here's the whole system.
+      </p>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 760 268" role="img" aria-label="A browser or phone talks to the Inkwell server over your network; Inkwell talks to Ollama and reads and writes a book folder on disk; nothing connects to the internet.">
+            <defs>
+              <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 1 L9 5 L0 9 z" fill="currentColor"/>
+              </marker>
+              <marker id="arg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 1 L9 5 L0 9 z" fill="#d2ad63"/>
+              </marker>
+            </defs>
+
+            <!-- your machine boundary -->
+            <rect x="216" y="26" width="392" height="216" rx="14" fill="none" stroke="#d2ad63" stroke-width="1.2" stroke-dasharray="6 5" opacity=".8"/>
+            <text x="232" y="46" font-size="11" font-family="system-ui, sans-serif" fill="#d2ad63" letter-spacing="1.6">YOUR MACHINE</text>
+
+            <!-- client -->
+            <rect x="14" y="92" width="136" height="56" rx="9" fill="none" stroke="currentColor" stroke-width="1.1"/>
+            <text x="82" y="115" font-size="13" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle">Browser</text>
+            <text x="82" y="133" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".65">or your phone</text>
+
+            <line x1="152" y1="120" x2="208" y2="120" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"/>
+            <text x="180" y="110" font-size="10.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".7">:4321</text>
+
+            <!-- inkwell -->
+            <rect x="240" y="84" width="142" height="58" rx="9" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <text x="311" y="107" font-size="13" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle">Inkwell</text>
+            <text x="311" y="125" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".65">Node, ~1200 lines</text>
+
+            <!-- ollama -->
+            <rect x="440" y="84" width="142" height="58" rx="9" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <text x="511" y="107" font-size="13" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle">Ollama</text>
+            <text x="511" y="125" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".65">your model, :11434</text>
+
+            <line x1="384" y1="113" x2="434" y2="113" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"/>
+            <text x="409" y="103" font-size="10.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".7">prompt</text>
+
+            <!-- disk -->
+            <rect x="240" y="178" width="142" height="50" rx="9" fill="none" stroke="currentColor" stroke-width="1.1"/>
+            <text x="311" y="199" font-size="12.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle">books/</text>
+            <text x="311" y="216" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".65">.md + .json</text>
+            <line x1="311" y1="146" x2="311" y2="172" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar)"/>
+            <text x="322" y="164" font-size="10.5" font-family="system-ui, sans-serif" fill="currentColor" opacity=".7">reads / writes</text>
+
+            <!-- internet, not connected -->
+            <rect x="646" y="92" width="104" height="56" rx="9" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="4 4" opacity=".4"/>
+            <text x="698" y="125" font-size="12" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".45">the internet</text>
+            <line x1="612" y1="120" x2="640" y2="120" stroke="currentColor" stroke-width="1.1" opacity=".3"/>
+            <line x1="618" y1="112" x2="634" y2="128" stroke="currentColor" stroke-width="1.6" opacity=".55"/>
+            <line x1="634" y1="112" x2="618" y2="128" stroke="currentColor" stroke-width="1.6" opacity=".55"/>
+            <text x="626" y="152" font-size="10.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".55">never</text>
+          </svg>
+        </div>
+        <figcaption>
+          The browser is just a window. All the thinking happens between the Inkwell process and
+          Ollama, on one machine, over localhost. The only reason a second device appears is that
+          you asked to read from the sofa.
+        </figcaption>
+      </figure>
+
+      <p class="col">
+        That's it. <strong>Inkwell never calls anything but Ollama</strong>, and Ollama never calls
+        anything at all once the model is downloaded. If your firewall asked you to allow something,
+        it was a phone on your own Wi-Fi.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- ================= THE INTERVIEW ================= -->
+    <section id="interview">
+      <p class="eyebrow">★ The centrepiece</p>
+      <h2>The interview is the whole trick</h2>
+
+      <p class="col">
+        Ask any model to "write me a fantasy novel outline" and you'll get the same outline it gives
+        everybody. Not because it's stupid — because you didn't tell it anything. The gap between a
+        generic book and yours is a few hundred words of specifics that only exist in your head, and
+        no prompt template gets them out.
+      </p>
+
+      <p class="col">
+        So Inkwell doesn't start with a prompt. It starts with a <strong>developmental editor who
+        interviews you</strong>, one question at a time, and writes each question from everything
+        you've already said.
+      </p>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 780 300" role="img" aria-label="The premise seeds a transcript; the model reads the entire transcript to write one question; you answer; the answer is appended to the transcript; when you are ready the transcript builds the outline and story bible.">
+            <defs>
+              <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 1 L9 5 L0 9 z" fill="currentColor"/>
+              </marker>
+              <marker id="ar2g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 1 L9 5 L0 9 z" fill="#d2ad63"/>
+              </marker>
+            </defs>
+
+            <!-- premise -->
+            <rect x="14" y="140" width="132" height="56" rx="9" fill="none" stroke="currentColor" stroke-width="1.1"/>
+            <text x="80" y="163" font-size="12.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle">Your premise</text>
+            <text x="80" y="181" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".6">one paragraph</text>
+            <line x1="148" y1="168" x2="184" y2="168" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"/>
+
+            <!-- transcript -->
+            <rect x="190" y="136" width="152" height="64" rx="9" fill="none" stroke="#d2ad63" stroke-width="1.5"/>
+            <text x="266" y="161" font-size="13" font-family="system-ui, sans-serif" fill="#d2ad63" text-anchor="middle">The transcript</text>
+            <text x="266" y="180" font-size="11" font-family="system-ui, sans-serif" fill="#d2ad63" text-anchor="middle" opacity=".7">saved to plan.json</text>
+
+            <!-- question -->
+            <rect x="200" y="30" width="156" height="56" rx="9" fill="none" stroke="currentColor" stroke-width="1.1"/>
+            <text x="278" y="53" font-size="12.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle">One question</text>
+            <text x="278" y="71" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".6">specific to your book</text>
+
+            <!-- answer -->
+            <rect x="436" y="30" width="152" height="56" rx="9" fill="none" stroke="currentColor" stroke-width="1.1"/>
+            <text x="512" y="53" font-size="12.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle">Your answer</text>
+            <text x="512" y="71" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".6">as long as you like</text>
+
+            <!-- transcript -> question (the mechanism) -->
+            <line x1="266" y1="132" x2="266" y2="92" stroke="#d2ad63" stroke-width="1.6" marker-end="url(#ar2g)"/>
+            <text x="278" y="112" font-size="11" font-family="system-ui, sans-serif" fill="#d2ad63">re-read in full, every time</text>
+
+            <!-- question -> answer -->
+            <line x1="358" y1="58" x2="430" y2="58" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"/>
+            <text x="394" y="48" font-size="10.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".7">Ask this</text>
+
+            <!-- answer -> transcript -->
+            <polyline points="512,88 512,168 348,168" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"/>
+            <text x="522" y="120" font-size="10.5" font-family="system-ui, sans-serif" fill="currentColor" opacity=".7">appended</text>
+
+            <!-- transcript -> outline -->
+            <polyline points="266,204 266,248 674,248 674,204" fill="none" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar2)"/>
+            <text x="470" y="240" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".8">when you're ready — “Build outline &amp; bible”</text>
+
+            <rect x="602" y="140" width="146" height="56" rx="9" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <text x="675" y="163" font-size="12.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle">Outline + bible</text>
+            <text x="675" y="181" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".6">4 acts, 12–20 chapters</text>
+          </svg>
+        </div>
+        <figcaption>
+          The gold arrow is the part that matters. Every question is generated fresh from the
+          <em>entire</em> transcript, so question seven knows what you said in question two — and
+          knows not to ask it again.
+        </figcaption>
+      </figure>
+
+      <h3>What it actually feels like</h3>
+
+      <p class="col">
+        You type a premise. Inkwell asks one thing. You answer in whatever register you like —
+        a sentence, a rant, a shrug. Then it proposes the next question and hands you two buttons:
+        <strong>Ask this</strong>, or <strong>Skip</strong> and get a different one.
+      </p>
+
+      <div class="chat">
+        <div class="bub ai"><span class="who">Inkwell</span>Maren forges maps that alter the real world. Before we talk about how that's discovered — what does she want badly enough to keep doing it after she knows?</div>
+        <div class="bub me"><span class="who">You</span>She's paying off her father's debt. He surveyed the coast honestly and it ruined him. She's making the money back the crooked way and telling herself it's a correction.</div>
+        <div class="bub ai"><span class="who">Inkwell</span>So the forgeries are an argument with a dead man. Who's the first person to notice a map is wrong — and do they come to her, or go over her head?</div>
+        <div class="bub me"><span class="who">You</span>A junior surveyor. He comes to her first, which is the mistake. She talks him out of it and it works, and that's the moment she stops being sympathetic.</div>
+        <div class="suggest">
+          <div class="lbl">Suggested next question · probing: the midpoint reversal</div>
+          <div class="qq">You've made her complicit on purpose. What does the junior surveyor do six weeks later that she can't talk her way out of?</div>
+          <div class="btns"><span class="pill">Ask this</span><span class="pill plain">Skip</span></div>
+        </div>
+      </div>
+
+      <p class="col">
+        Notice what the model is doing there. It named the thing you'd implied but not said —
+        <em class="q">"an argument with a dead man"</em> — and then aimed the next question at the
+        structural hole your answer just opened. That's not a template. It couldn't have asked it
+        of anybody else's book.
+      </p>
+
+      <h3>Thin answers make thin books</h3>
+
+      <p class="col">
+        This is the one place where effort pays compound interest. The interview is upstream of
+        the outline, which is upstream of the bible, which is upstream of every sentence the model
+        will ever write for you. Here's the same question answered two ways, and what came out the
+        far end.
+      </p>
+
+      <div class="compare">
+        <div class="ans thin">
+          <div class="tag">Thin answer</div>
+          <div class="said">"There's a confrontation near the end and she has to choose."</div>
+          <div class="got"><b>What the outline gave back</b>
+            Chapter 14 — <em>The Confrontation.</em> Maren faces the consequences of her actions
+            and must decide who she really is.
+          </div>
+        </div>
+        <div class="ans thick">
+          <div class="tag">Thick answer</div>
+          <div class="said">"He brings the honest survey to her kitchen, not the guild. She can burn it or file it. Burning it saves her and finishes what her father started — the coast stays wrong forever. She burns it, and the book doesn't forgive her."</div>
+          <div class="got"><b>What the outline gave back</b>
+            Chapter 14 — <em>The Kitchen Table.</em> Tam lays the true survey between the salt and
+            the lamp and waits. Maren argues it's already too late to matter. She feeds it to the
+            stove page by page while he watches, and neither of them says anything afterwards.
+          </div>
+        </div>
+      </div>
+
+      <p class="col">
+        Same model. Same settings. The difference is entirely upstream. <strong>Specifics in, specifics out</strong> —
+        objects, rooms, who's standing where, what it costs. Abstractions in ("she must confront her past")
+        and you get the abstraction back with better adjectives.
+      </p>
+
+      <h3>What it's fishing for</h3>
+
+      <p class="col">
+        The interviewer is steered toward the load-bearing parts of a story and asks about whichever
+        is currently weakest. You'll see it circle these:
+      </p>
+
+      <div class="chips">
+        <span class="chip">Want vs. need</span>
+        <span class="chip">The inciting incident</span>
+        <span class="chip">The antagonistic force</span>
+        <span class="chip">The midpoint reversal</span>
+        <span class="chip">The climax</span>
+        <span class="chip">What the ending costs</span>
+        <span class="chip">Tone</span>
+        <span class="chip">Setting</span>
+      </div>
+
+      <p class="col">
+        You don't have to know these answers before you start — that's rather the point. Half of
+        them you'll invent in the act of answering, which is the oldest trick in writing and the
+        reason talking to someone about your book works at all.
+      </p>
+
+      <h3>It waits for you</h3>
+
+      <div class="cards two">
+        <div class="card lit">
+          <h5>Leave mid-sentence</h5>
+          <p>The transcript is written to <code>plan.json</code> after every exchange. Close the tab, come back next week, hit <strong>Resume</strong>. Nothing is held in a session.</p>
+        </div>
+        <div class="card lit">
+          <h5>Answer more later</h5>
+          <p>Kept answering after you built the outline? A gold bar appears: <em>"you've answered 3 more questions since this outline was built."</em> One click folds them in.</p>
+        </div>
+      </div>
+
+      <h3>Then it builds the book's spine</h3>
+
+      <p class="col">
+        When you've said enough, <strong>Build outline &amp; bible</strong> reads the whole transcript
+        twice — once to design a four-act, 12–20 chapter outline with beats, once to extract the
+        story bible (characters, locations, themes, tone, style). The prompt is explicit that
+        <em class="q">the premise sets the world, but the author's answers are what the book is
+        actually about</em>. If your premise is high-concept and your answers are about two people
+        in a kitchen, you get the book about the kitchen.
+      </p>
+
+      <p class="col">
+        And it keeps paying out. <strong>Refine structure</strong> lets you critique the outline in
+        plain English — <em class="q">"the middle act is rushed, split it"; "move the reveal earlier";
+        "aim for 18 chapters"</em> — and shows you a before/after with new, moved and kept chapters
+        colour-coded before anything changes. Chapters you've already written are matched by title
+        and preserved. The interview is never spent.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- ================= MEMORY ================= -->
+    <section id="memory">
+      <p class="eyebrow">The engine room</p>
+      <h2>Why it doesn't forget chapter three</h2>
+
+      <p class="col">
+        The failure mode of AI prose is amnesia. Twenty pages in, the model has lost the thread:
+        eye colours drift, a dead character walks in, the voice flattens toward the mean of the
+        internet. It isn't a mystery — the model only sees what you put in the prompt, and naïve
+        tools put in the last few paragraphs.
+      </p>
+
+      <p class="col">
+        Inkwell assembles three scopes of memory on <em>every single generation</em>:
+      </p>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 740 268" role="img" aria-label="Three layers — whole book synopsis and running summary, this chapter's beats, and the last few hundred words — are combined into one prompt sent to the model on every generation.">
+            <defs>
+              <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 1 L9 5 L0 9 z" fill="#d2ad63"/>
+              </marker>
+            </defs>
+
+            <text x="16" y="26" font-size="10.5" font-family="system-ui, sans-serif" fill="currentColor" opacity=".55" letter-spacing="1.4">SCOPE</text>
+
+            <rect x="16" y="36" width="376" height="54" rx="9" fill="none" stroke="currentColor" stroke-width="1.1"/>
+            <text x="34" y="59" font-size="12.5" font-family="system-ui, sans-serif" fill="currentColor">The whole book</text>
+            <text x="34" y="77" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" opacity=".6">synopsis · running summary · story bible</text>
+
+            <rect x="16" y="102" width="376" height="54" rx="9" fill="none" stroke="currentColor" stroke-width="1.1"/>
+            <text x="34" y="125" font-size="12.5" font-family="system-ui, sans-serif" fill="currentColor">This chapter</text>
+            <text x="34" y="143" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" opacity=".6">title · summary · 3–5 beats, in order</text>
+
+            <rect x="16" y="168" width="376" height="54" rx="9" fill="none" stroke="currentColor" stroke-width="1.1"/>
+            <text x="34" y="191" font-size="12.5" font-family="system-ui, sans-serif" fill="currentColor">Right here</text>
+            <text x="34" y="209" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" opacity=".6">the last ~350 words, and what follows</text>
+
+            <path d="M396 63 C440 63 448 110 486 124" fill="none" stroke="#d2ad63" stroke-width="1.3" opacity=".85"/>
+            <path d="M396 129 C440 129 448 128 486 129" fill="none" stroke="#d2ad63" stroke-width="1.3" opacity=".85"/>
+            <path d="M396 195 C440 195 448 148 486 134" fill="none" stroke="#d2ad63" stroke-width="1.3" opacity=".85"/>
+
+            <rect x="492" y="98" width="104" height="62" rx="9" fill="none" stroke="#d2ad63" stroke-width="1.5"/>
+            <text x="544" y="126" font-size="12.5" font-family="system-ui, sans-serif" fill="#d2ad63" text-anchor="middle">One prompt</text>
+            <text x="544" y="144" font-size="11" font-family="system-ui, sans-serif" fill="#d2ad63" text-anchor="middle" opacity=".7">every time</text>
+
+            <line x1="600" y1="129" x2="642" y2="129" stroke="#d2ad63" stroke-width="1.3" marker-end="url(#ar3)"/>
+
+            <rect x="648" y="102" width="84" height="54" rx="9" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <text x="690" y="134" font-size="12.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle">the model</text>
+          </svg>
+        </div>
+        <figcaption>
+          Three scopes, one prompt. The top layer is why it remembers the plot, the middle is why
+          the chapter goes where it's supposed to, and the bottom is why the seam doesn't show.
+        </figcaption>
+      </figure>
+
+      <p class="col">
+        After a chapter is finished, Inkwell folds it into a running <em>story so far</em> summary,
+        so the top layer stays current without ever resending the whole manuscript. All three layers
+        are adjustable in Settings — if generation feels slow, that's the first place to look, because
+        everything there is sent on <em>every</em> request.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- ================= PEN ================= -->
+    <section id="pen">
+      <p class="eyebrow">Two honest ways to use it</p>
+      <h2>Your editor, or your engine</h2>
+
+      <p class="col">
+        People arrive at a tool like this from opposite directions, and Inkwell refuses to take a
+        side. Both of these are supported all the way down; most writers slide between them by the hour.
+      </p>
+
+      <div class="cards two">
+        <div class="card">
+          <h5>The model as your editor</h5>
+          <p style="margin-bottom:10px">You write every word. It reads, questions and tightens.</p>
+          <p>
+            Interview yourself into a real structure. Draft by hand. Then select a passage, write
+            actual editorial notes on it — <em class="q">"cut the exposition, make her anger cold
+            not loud, end on the door closing"</em> — and read the revision as a diff. Take the two
+            changes that were right; throw the rest away. It's a tireless reader who has memorised
+            your story bible and never gets bored of chapter four.
+          </p>
+        </div>
+        <div class="card">
+          <h5>The model as your engine</h5>
+          <p style="margin-bottom:10px">It drafts. You steer, cut and decide.</p>
+          <p>
+            Build the outline, then let <strong>Continue writing</strong> lay down a first pass
+            against the chapter's beats while you sit on the brake — direction in the instruction
+            box, <strong>Describe / set the scene</strong> when a room needs to exist, quick rewrites
+            on anything limp. Nobody has to know how the sausage was made, and the bible keeps the
+            sausage consistent.
+          </p>
+        </div>
+      </div>
+
+      <p class="pull">Either way, the model proposes and you dispose. That's not a slogan — it's how the code works.</p>
+
+      <p class="col">
+        There's also the third mode nobody admits to: using it to get unstuck. Ask for a description
+        of a room you can't picture, read it, hate it, and discover you knew exactly what the room
+        looked like all along. That counts. Delete the suggestion and keep the unlock.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- ================= CONTROL ================= -->
+    <section id="control">
+      <p class="eyebrow">The dials</p>
+      <h2>Controlling the creativity</h2>
+
+      <p class="col">
+        "Creativity" in a language model is mostly one thing: how far down the list of plausible
+        next words it's willing to reach. Low, and it picks the most likely word every time —
+        coherent, competent, faintly dull. High, and it starts choosing the fourth-most-likely
+        word, which is where both the good images and the nonsense live.
+      </p>
+
+      <div class="dial">
+        <div class="dial-head">
+          <b>Temperature</b>
+          <span class="val" id="tval">0.80</span>
+        </div>
+        <p class="dial-hint">Drag it. Same chapter, same beat, same bible — different appetite for risk.</p>
+        <input type="range" id="temp" min="0" max="3" step="1" value="2" aria-label="Temperature" />
+        <div class="scale"><span>0.2 · flat</span><span>0.6 · careful</span><span>0.9 · lively</span><span>1.3 · feverish</span></div>
+        <div class="sample">
+          <span class="lbl" id="slbl">0.8 — lively</span>
+          <span id="stext">The rain came off the estuary in sheets, and Maren counted the roads she had invented, one for every year she had been lying to the guild.</span>
+        </div>
+        <p class="note">Illustrative — hand-written to show what the dial changes, not four real generations.</p>
+      </div>
+
+      <p class="col">
+        Most prose wants <strong>0.7–0.9</strong>. Below 0.5 it stops taking any risk at all; above
+        1.1 you'll spend more time cutting than you save. Two neighbours worth knowing:
+        <strong>top-p</strong> narrows the pool of words it's allowed to sample from at all (0.9 is
+        a good default, and it's a safer knob than temperature), and <strong>repeat penalty</strong>
+        stops the model falling in love with a phrase — nudge it up if you keep seeing the same
+        image twice a page.
+      </p>
+
+      <h3>The other kind of control</h3>
+
+      <p class="col">
+        Sampling dials are the crude instrument. The precise ones are all about what the model is
+        <em>told</em>, and they live in Settings and in your story bible.
+      </p>
+
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th>Dial</th><th>What it really does</th><th>Turn it when</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Surrounding prose</b><br><code>100–1200 words</code></td>
+              <td>How much of your actual writing goes in as the immediate voice reference.</td>
+              <td>Raise it if the voice drifts mid-scene. Lower it if generation is slow.</td>
+            </tr>
+            <tr>
+              <td><b>Send the story bible</b></td>
+              <td>Characters, locations and lore go in on every request.</td>
+              <td>Leave it on. Turn it off only for a scratch scene with no continuity.</td>
+            </tr>
+            <tr>
+              <td><b>Send the running summary</b></td>
+              <td>The "story so far" travels with each generation.</td>
+              <td>Leave it on past chapter three. It's what stops contradictions.</td>
+            </tr>
+            <tr>
+              <td><b>Style guide</b> (in the bible)</td>
+              <td>A sentence or two describing the voice to hold. Goes into the system prompt.</td>
+              <td>Always. This is the highest-leverage text box in the app.</td>
+            </tr>
+            <tr>
+              <td><b>Tone</b> (in the bible)</td>
+              <td>The mood the prose is checked against — <em class="q">"cold rain on paper. Precise, restrained, faintly cruel."</em></td>
+              <td>Write it as a fragment, not an adjective list. Fragments carry more.</td>
+            </tr>
+            <tr>
+              <td><b>Context window</b><br><code>num_ctx</code></td>
+              <td>How much the model can hold at once. Planning calls force at least 16k regardless.</td>
+              <td>Raise for long chapters; it costs memory and speed.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Nothing enters your manuscript without you</h3>
+
+      <p class="col">
+        This is the part that matters most and gets talked about least. Inkwell's AI actions never
+        write to your chapter file. They produce a <em>proposal</em>, rendered as a word-level diff
+        you read like a code review, with four buttons: Accept, More notes, Retry, Discard.
+      </p>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 740 236" role="img" aria-label="Your selection and notes go to the model, which returns a proposal shown as a diff; only if you accept does anything reach your chapter file.">
+            <defs>
+              <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 1 L9 5 L0 9 z" fill="currentColor"/>
+              </marker>
+              <marker id="ar4g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0 1 L9 5 L0 9 z" fill="#d2ad63"/>
+              </marker>
+            </defs>
+
+            <rect x="14" y="86" width="150" height="60" rx="9" fill="none" stroke="currentColor" stroke-width="1.1"/>
+            <text x="89" y="110" font-size="12.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle">Your passage</text>
+            <text x="89" y="128" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".6">+ your notes on it</text>
+
+            <line x1="166" y1="116" x2="204" y2="116" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar4)"/>
+
+            <rect x="210" y="86" width="118" height="60" rx="9" fill="none" stroke="currentColor" stroke-width="1.1"/>
+            <text x="269" y="121" font-size="12.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle">the model</text>
+
+            <line x1="330" y1="116" x2="368" y2="116" stroke="currentColor" stroke-width="1.2" marker-end="url(#ar4)"/>
+
+            <rect x="374" y="86" width="150" height="60" rx="9" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 4"/>
+            <text x="449" y="110" font-size="12.5" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle">A proposal</text>
+            <text x="449" y="128" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" text-anchor="middle" opacity=".6">shown as a diff</text>
+
+            <path d="M526 104 C556 104 566 74 596 62" fill="none" stroke="#d2ad63" stroke-width="1.5" marker-end="url(#ar4g)"/>
+            <text x="546" y="76" font-size="11" font-family="system-ui, sans-serif" fill="#d2ad63">Accept</text>
+
+            <path d="M526 130 C556 130 566 166 596 178" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".55" marker-end="url(#ar4)"/>
+            <text x="540" y="176" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" opacity=".55">Discard</text>
+
+            <rect x="602" y="34" width="132" height="56" rx="9" fill="none" stroke="#d2ad63" stroke-width="1.5"/>
+            <text x="668" y="58" font-size="12.5" font-family="system-ui, sans-serif" fill="#d2ad63" text-anchor="middle">chapter.md</text>
+            <text x="668" y="76" font-size="11" font-family="system-ui, sans-serif" fill="#d2ad63" text-anchor="middle" opacity=".7">your file, your call</text>
+
+            <text x="602" y="176" font-size="12" font-family="system-ui, sans-serif" fill="currentColor" opacity=".45">…nothing happens</text>
+            <text x="602" y="194" font-size="11" font-family="system-ui, sans-serif" fill="currentColor" opacity=".35">no trace, no cost</text>
+          </svg>
+        </div>
+        <figcaption>
+          The only path into your manuscript runs through a button you press. A discarded suggestion
+          leaves nothing behind — no half-edit, no "AI version" of the file, no undo to hunt for.
+        </figcaption>
+      </figure>
+
+      <p class="col">
+        And when a revision is <em>nearly</em> right, <strong>More notes ↻</strong> keeps the
+        original, its last attempt and your new feedback all in view at once, so the second pass
+        is a real second pass rather than a fresh roll of the dice. That loop — notes, diff, more
+        notes — is the closest thing here to actual editing, and it's free to run twenty times.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- ================= PAGES ================= -->
+    <section id="pages">
+      <p class="eyebrow">The payoff</p>
+      <h2>Then you get to see the book</h2>
+
+      <p class="col">
+        The <strong>Pages</strong> tab lays your chapters out as printed pages at a real trim size.
+        Not a preview skin — the browser's own layout engine paginates into columns exactly the
+        width and height of the text block, so each column <em>is</em> a page. Line breaks, hyphens,
+        justification, drop caps and the way text flows around a picture are the genuine article.
+      </p>
+
+      <figure class="sheet">
+        <div class="rh">The Cartographer's Debt</div>
+        <div class="onum">Chapter I</div>
+        <h6>The Forged Coast</h6>
+        <div class="orn">❦</div>
+        <p class="first">Her father had warned her that a map is a promise, and that promises made
+          in ink are the hardest kind to break. Below the harbour the lamps came on one at a time,
+          as if someone were counting them too.</p>
+        <p>She folded the sheet along a crease that had not existed that morning. Somewhere north
+          of the ridge a road was being built that no one had commissioned, and it was, she thought,
+          a very small crime that had made a very large country.</p>
+        <div class="folio">1</div>
+      </figure>
+
+      <p class="col">
+        Everything on that page is a control: trim size from pocket to letter, mirrored inner and
+        outer margins, typeface, point size, leading, justification and hyphenation, drop caps or
+        small caps, chapter-opener style and numbering, running heads, folios, scene-break
+        ornaments, paper tint and ink. Six named looks to start from — and if you'd rather not
+        fiddle, <strong>let the model design it</strong>: the same local model reads your genre and
+        tone and sets the page to match, with a sentence explaining why.
+      </p>
+
+      <div class="cards three">
+        <div class="card">
+          <h5>Art that text flows around</h5>
+          <p>Drop in an image, pin it to a paragraph, and choose the wrap: box, circle, oval — or the artwork's own outline, traced from the transparent edges of a PNG.</p>
+        </div>
+        <div class="card">
+          <h5>Print at the real trim</h5>
+          <p>Print → Save as PDF gives you a 6×9 PDF that's 6×9, with your type and your art where you put them.</p>
+        </div>
+        <div class="card">
+          <h5>EPUB that keeps the design</h5>
+          <p>Export carries the typography, chapter openers, drop caps, scene breaks and placed art. Uploaded fonts get embedded. Straight to KDP.</p>
+        </div>
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- ================= OLLAMA ================= -->
+    <section id="ollama">
+      <p class="eyebrow">Setup</p>
+      <h2>Getting Ollama and a model running</h2>
+
+      <p class="col">
+        Ollama is the piece that actually runs the model. It's one download, it has no account, and
+        once it's installed it sits quietly in the background listening on
+        <code>localhost:11434</code>. Inkwell talks to it and nothing else.
+      </p>
+
+      <ol class="steps">
+        <li>
+          <h3>Install Ollama</h3>
+          <p>Grab it from <a href="https://ollama.com/download">ollama.com/download</a> — there's a normal installer for macOS and Windows. On Linux:</p>
+          <pre><span class="c"># installs and starts the background service</span>
+curl -fsSL https://ollama.com/install.sh | sh</pre>
+          <p>Check it's alive. This should print a version, not an error:</p>
+          <pre>ollama --version</pre>
+        </li>
+
+        <li>
+          <h3>Pull a model</h3>
+          <p>
+            This is the one real decision. A model's size is roughly its appetite for RAM — as a
+            rule of thumb a quantized model needs about <strong>0.7&nbsp;GB per billion parameters</strong>,
+            plus room for context. Gemma is a good default family: small ones are quick and
+            surprisingly literate, big ones plan properly.
+          </p>
+          <pre><span class="c"># pick one to start — this is a few GB, so it takes a minute</span>
+ollama pull <span class="p">gemma3:4b</span>      <span class="c"># light, fast, fine for trying the flow</span>
+ollama pull <span class="p">gemma3:12b</span>     <span class="c"># the sweet spot on 16 GB</span>
+ollama pull <span class="p">llama3.1:8b</span>    <span class="c"># solid all-rounder</span>
+ollama pull <span class="p">mistral-nemo</span>   <span class="c"># 12B, lovely prose, long context</span>
+
+<span class="c"># what have I got?</span>
+ollama list</pre>
+          <div class="tablewrap">
+            <table>
+              <thead><tr><th>If you have</th><th>Pull</th><th>What to expect</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><b>8 GB RAM</b><br><span style="color:var(--faint);font-size:13px">or an older laptop</span></td>
+                  <td><code>gemma3:4b</code></td>
+                  <td>Great for learning the app and drafting short scenes. Planning steps ask for strict JSON and small models sometimes fumble it — if an outline comes back empty, that's why.</td>
+                </tr>
+                <tr>
+                  <td><b>16 GB RAM</b><br><span style="color:var(--faint);font-size:13px">the common case</span></td>
+                  <td><code>gemma3:12b</code><br><code>mistral-nemo</code><br><code>llama3.1:8b</code></td>
+                  <td>The sweet spot. Reliable outlines, prose with an actual voice, revisions that understand your notes. A page in a handful of seconds on Apple silicon.</td>
+                </tr>
+                <tr>
+                  <td><b>32 GB+ / a real GPU</b></td>
+                  <td><code>gemma3:27b</code><br><code>qwen2.5:32b</code></td>
+                  <td>Noticeably better structure and subtler prose. Slower per page — which is why you might keep a small model around for drafting.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="note-box">
+            <p><b>Model tags move.</b> The library at <a href="https://ollama.com/library">ollama.com/library</a>
+            has the current names and sizes for every family — if a tag above has been superseded by
+            the time you read this, pull whatever that page calls the current release of the same size.</p>
+          </div>
+        </li>
+
+        <li>
+          <h3>Start Inkwell</h3>
+          <pre>npm install
+npm start</pre>
+          <p>It prints where to find itself:</p>
+          <pre>  Inkwell  ·  your local AI writing studio
+  ▸ http://localhost:4321
+  ▸ http://192.168.1.24:4321   <span class="c">← from your phone, on the same network</span>
+  ▸ Ollama: http://localhost:11434</pre>
+        </li>
+
+        <li>
+          <h3>Pick your model, watch the dot</h3>
+          <p>
+            Top right of the app there's a dropdown listing everything <code>ollama list</code> knows
+            about, and a dot beside it. <strong style="color:var(--green)">Green</strong> means Ollama
+            answered. <strong style="color:var(--rose)">Red</strong> means it isn't running — start
+            it and reload. Your choice is remembered, and the gear icon lets you set a default for
+            new books.
+          </p>
+        </li>
+      </ol>
+
+      <h3>The two-model habit</h3>
+
+      <p class="col">
+        You can change model between actions, and it's worth doing. The planning steps —
+        interview, outline, bible, refine — run a handful of times and benefit enormously from a
+        bigger model. Drafting runs constantly and benefits from speed. Plan with the 27B, draft
+        with the 8B, switch in the dropdown whenever you like. Nothing is tied to a book.
+      </p>
+
+      <h3>When something goes wrong</h3>
+
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>What you see</th><th>What it means</th><th>Fix</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>“The model <code>x</code> isn't installed in Ollama”</td>
+              <td>You've selected a model you don't actually have — Inkwell catches this before it fails.</td>
+              <td>Run the <code>ollama pull</code> it shows you, or pick an installed model from the dropdown.</td>
+            </tr>
+            <tr>
+              <td>“Ollama not running”, red dot</td>
+              <td>Nothing is listening on 11434.</td>
+              <td>Start the Ollama app, or <code>ollama serve</code> in a terminal.</td>
+            </tr>
+            <tr>
+              <td>Empty outline, or “returned an empty structure”</td>
+              <td>The model was asked for strict JSON and produced something unparseable. Small models do this.</td>
+              <td>Try a larger model, or answer one more interview question — richer input tends to produce cleaner output.</td>
+            </tr>
+            <tr>
+              <td>Everything is slow</td>
+              <td>Too much context per request, or a model too big for the machine.</td>
+              <td>In Settings, drop <em>surrounding prose</em> to ~200 words and lower the context window. Then try a smaller model.</td>
+            </tr>
+            <tr>
+              <td>Prose repeats itself</td>
+              <td>Repeat penalty too low, or too little surrounding prose to anchor the voice.</td>
+              <td>Nudge repeat penalty to ~1.15 and raise surrounding prose.</td>
+            </tr>
+            <tr>
+              <td>Ollama is on a different machine</td>
+              <td>You want the model on the desktop and Inkwell on the laptop.</td>
+              <td>Start Ollama with <code>OLLAMA_HOST=0.0.0.0 ollama serve</code>, then run Inkwell with <code>OLLAMA_HOST=http://192.168.1.30:11434 npm start</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <hr />
+
+    <!-- ================= PHONE ================= -->
+    <section id="phone">
+      <p class="eyebrow">Elsewhere in the house</p>
+      <h2>Writing from the sofa</h2>
+
+      <p class="col">
+        Inkwell listens on every network interface, so the moment it's running on your desktop it's
+        reachable from anything else on the same Wi-Fi. Open the second address it printed on your
+        phone and you get the whole studio: the outline map drags with a finger, the AI panel is a
+        bottom sheet, and the Pages view shows one page at a time — swipe to turn. Add it to your
+        home screen and it opens full-screen like an app.
+      </p>
+
+      <p class="col">
+        Only the machine running Inkwell needs Ollama. Your phone is just a window, and the
+        manuscript never leaves the desktop.
+      </p>
+
+      <div class="note-box warn">
+        <p><b>There's no password.</b> Anyone on your network can open your book. That's a
+        deliberate trade for a personal tool on a home network — but on shared or public Wi-Fi,
+        lock it down:</p>
+        <pre style="margin-bottom:0">INKWELL_HOST=127.0.0.1 npm start</pre>
+      </div>
+
+      <p class="col">
+        If the phone can't find it: check both devices are on the same network (not a guest
+        network), and say yes when macOS or Windows asks whether to allow incoming connections.
+      </p>
+    </section>
+
+    <hr />
+
+    <!-- ================= FIRST HOUR ================= -->
+    <section id="first">
+      <p class="eyebrow">Start here</p>
+      <h2>Your first hour, in order</h2>
+
+      <ol class="steps">
+        <li>
+          <h3>Write one paragraph of premise</h3>
+          <p>Not a pitch — a seed. The one sentence that made you want to write this at all, plus enough setting to stand on. Create the book; the interview starts itself.</p>
+        </li>
+        <li>
+          <h3>Answer six questions properly</h3>
+          <p>Twenty minutes, real specifics, no shrugging. Skip any question that bores you — the next one will be better. This is the highest-value hour you'll spend in the app, and everything downstream inherits it.</p>
+        </li>
+        <li>
+          <h3>Build the outline and bible</h3>
+          <p>Read the chapter list. If the middle sags, say so in <strong>Refine structure</strong> and look at the before/after. Repeat until the spine looks like your book.</p>
+        </li>
+        <li>
+          <h3>Fix the tone and style guide by hand</h3>
+          <p>Open the Bible and rewrite those two boxes yourself. Two sentences. They're in the system prompt on every generation and they do more for the voice than any sampling setting.</p>
+        </li>
+        <li>
+          <h3>Write chapter one your way</h3>
+          <p>By hand with the model as editor, or by beats with the model as engine. Try the notes-and-diff loop once on a paragraph you're unhappy with — that's the moment the tool usually clicks.</p>
+        </li>
+        <li>
+          <h3>Look at it as a book</h3>
+          <p>Open Pages. Pick a trim, pick a face, watch your own sentence break across a real line. It's a cheap thrill and a surprisingly good motivator.</p>
+        </li>
+      </ol>
+    </section>
+
+    <hr />
+
+    <!-- ================= FILES ================= -->
+    <section id="files">
+      <p class="eyebrow">Ownership</p>
+      <h2>Where your work actually lives</h2>
+
+      <p class="col">
+        No database, no bundle, no proprietary anything. One folder per book, all of it readable
+        with any text editor twenty years from now.
+      </p>
+
+      <div class="tree">
+Inkwell/books/&lt;book-id&gt;/
+  <b>book.json</b>      <i>title, author, premise, POV, tense</i>
+  <b>bible.json</b>     <i>characters, locations, themes, tone, style, running summary</i>
+  <b>outline.json</b>   <i>acts, chapters, beats, map positions</i>
+  <b>plan.json</b>      <i>the interview transcript — this is the good stuff</i>
+  <b>notes.md</b>       <i>freeform scratch space</i>
+  <b>design.json</b>    <i>trim, margins, typography, page furniture</i>
+  <b>art.json</b>       <i>where each picture sits in the prose</i>
+  <b>assets/</b>        <i>images and fonts you've uploaded</i>
+  <b>chapters/</b>      <i>*.md — your actual prose, one file per chapter</i>
+      </div>
+
+      <p class="col">
+        Put that folder in git and you have version history for your novel. Copy it to a drive and
+        you have a backup. Move it to another machine and everything — outline, bible, interview,
+        page design — comes with it.
+      </p>
+
+      <p class="pull">The tool should be the disposable part. The folder is the book.</p>
+    </section>
+
+    <footer>
+      <p><strong>Inkwell</strong> — a local, private writing studio. MIT licensed, free forever, no strings.</p>
+      <p>Built because good tools for novelists shouldn't have a meter on them.</p>
+    </footer>
+
+  </main>
+</div>
+</div>
+
+<script>
+// The temperature dial: four hand-written samples of the same beat, so the
+// difference you feel is the one the setting actually makes.
+(function () {
+  var samples = [
+    { t: '0.2', name: 'flat', text: 'The rain fell on the estuary. Maren looked at the maps she had made. There were many of them, and she had made them all.' },
+    { t: '0.6', name: 'careful', text: 'Rain came across the estuary in long grey sheets. Maren counted the roads she had invented, and found there were more of them than she remembered.' },
+    { t: '0.8', name: 'lively', text: 'The rain came off the estuary in sheets, and Maren counted the roads she had invented, one for every year she had been lying to the guild.' },
+    { t: '1.3', name: 'feverish', text: 'The estuary threw its rain at the window like a creditor, and Maren counted her invented roads the way other women count rosaries — each one a small country she had talked into existing.' }
+  ];
+  var range = document.getElementById('temp');
+  var val = document.getElementById('tval');
+  var lbl = document.getElementById('slbl');
+  var txt = document.getElementById('stext');
+  if (!range) return;
+  function paint() {
+    var s = samples[+range.value] || samples[2];
+    val.textContent = (+s.t).toFixed(2);
+    lbl.textContent = s.t + ' — ' + s.name;
+    txt.textContent = s.text;
+  }
+  range.addEventListener('input', paint);
+  paint();
+})();
+</script>
+
+</body>
+</html>
