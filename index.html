@@ -1270,8 +1270,8 @@ curl -fsSL https://ollama.com/install.sh | sh</pre>
             surprisingly literate, big ones plan properly.
           </p>
           <pre><span class="c"># pick one to start — this is a few GB, so it takes a minute</span>
+ollama pull <span class="p">gemma4:e4b</span>     <span class="c"># current Gemma, ~10 GB, plans properly</span>
 ollama pull <span class="p">gemma3:4b</span>      <span class="c"># light, fast, fine for trying the flow</span>
-ollama pull <span class="p">gemma3:12b</span>     <span class="c"># the sweet spot on 16 GB</span>
 ollama pull <span class="p">llama3.1:8b</span>    <span class="c"># solid all-rounder</span>
 ollama pull <span class="p">mistral-nemo</span>   <span class="c"># 12B, lovely prose, long context</span>
 
@@ -1288,7 +1288,7 @@ ollama list</pre>
                 </tr>
                 <tr>
                   <td><b>16 GB RAM</b><br><span style="color:var(--faint);font-size:13px">the common case</span></td>
-                  <td><code>gemma3:12b</code><br><code>mistral-nemo</code><br><code>llama3.1:8b</code></td>
+                  <td><code>gemma4:e4b</code><br><code>mistral-nemo</code><br><code>llama3.1:8b</code></td>
                   <td>The sweet spot. Reliable outlines, prose with an actual voice, revisions that understand your notes. A page in a handful of seconds on Apple silicon.</td>
                 </tr>
                 <tr>
@@ -1300,9 +1300,11 @@ ollama list</pre>
             </table>
           </div>
           <div class="note-box">
-            <p><b>Model tags move.</b> The library at <a href="https://ollama.com/library">ollama.com/library</a>
-            has the current names and sizes for every family — if a tag above has been superseded by
-            the time you read this, pull whatever that page calls the current release of the same size.</p>
+            <p><b>Model tags move, and quickly.</b> Gemma has already gone from 3 to 4 since this
+            table was first written. The library at <a href="https://ollama.com/library">ollama.com/library</a>
+            has the current names and sizes for every family — treat the names here as a shape to
+            match rather than gospel, and pull whatever that page calls the current release at the
+            size your machine can hold. <code>ollama list</code> shows what you already have.</p>
           </div>
         </li>
 
