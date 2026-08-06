@@ -411,6 +411,7 @@ footer p { margin: 0 0 8px; }
     <a href="#pen">Who holds the pen</a>
     <a href="#control">Controlling creativity</a>
     <a href="#pages">Seeing the book</a>
+    <a href="#picture">Picture books</a>
     <a href="#ollama">Setting up Ollama</a>
     <a href="#cloud">If you can't run one</a>
     <a href="#phone">From your phone</a>
@@ -1236,6 +1237,109 @@ footer p { margin: 0 0 8px; }
           <p>Export carries the typography, chapter openers, drop caps, scene breaks and placed art. Uploaded fonts get embedded. Straight to KDP.</p>
         </div>
       </div>
+    </section>
+
+    <hr />
+
+    <!-- ================= PICTURE BOOKS ================= -->
+    <section id="picture">
+      <p class="eyebrow">A different shape of book</p>
+      <h2>Picture books, and pictures to go in them</h2>
+
+      <p class="col">
+        When you start a book, Inkwell asks what kind it is. Pick <strong>Picture book</strong> and
+        almost everything changes: the unit stops being a chapter and becomes a <em>spread</em> —
+        two facing pages carrying one picture and a line or two of text. It stops asking about point
+        of view and tense, and starts asking who the child becomes while reading. The page starts
+        square instead of 6×9. The whole book is four hundred words instead of ninety thousand.
+      </p>
+
+      <p class="col">
+        That's not cosmetic. A model told to "write publishable literary prose" will bury a picture
+        book under a page of novel, every time. So a picture book gets its own system prompt, its own
+        interview, its own planner and its own word budget — twelve words a spread for a board book,
+        forty-five for a picture book, ninety for an early reader — and the budget is in the prompt,
+        not a hope.
+      </p>
+
+      <div class="cards three">
+        <div class="card">
+          <h5>Planned as spreads</h5>
+          <p>One pass lays out all fourteen spreads: the words that appear on each one, and a note
+          on what the picture shows. Each spread ends on a reason to turn the page, and at least one
+          is nearly wordless.</p>
+        </div>
+        <div class="card">
+          <h5>The words and the picture disagree on purpose</h5>
+          <p>The oldest rule in the form: never write what the picture already shows. Inkwell holds
+          the art note for the current spread and explicitly tells the model to keep it out of the
+          text.</p>
+        </div>
+        <div class="card">
+          <h5>A refrain, and it comes back changed</h5>
+          <p>If the interview suggests a repeated line, the planner finds it, stores it in the bible,
+          and sends it with every spread you write — so the book keeps returning to it.</p>
+        </div>
+      </div>
+
+      <h3>The look, locked</h3>
+
+      <p class="col">
+        The reason AI illustration usually fails a book is that the protagonist changes shape between
+        pages. Inkwell's answer is a <strong>visual bible</strong>: one style line for the whole book,
+        a fixed palette, and per character a physical description of fifteen to twenty-five words —
+        species, size, hair, and above all the one unmistakable thing they always have. Ask the model
+        to set it and it writes all three; then you edit them, because they are yours.
+      </p>
+
+      <p class="col">
+        Every illustration prompt is then built the same way: the character's description copied in
+        <em>verbatim</em>, then what they're doing, then where, then framing and light, then the same
+        locked style line at the end. The previous spread's prompt goes in too, so place and light
+        carry across the page turn. That repetition is the whole trick — nothing clever, just refusing
+        to describe the bear differently twice.
+      </p>
+
+      <h3>Where the pictures come from</h3>
+
+      <p class="col">
+        Same principle as the text: your machine, your model, no account. Inkwell writes the prompt
+        with your local language model, then hands it to an image generator you already run.
+      </p>
+
+      <div class="cards three">
+        <div class="card">
+          <h5>ComfyUI</h5>
+          <p>The usual choice on Windows with an NVIDIA card. Point Inkwell at
+          <code>127.0.0.1:8188</code>, pick a checkpoint, done. Prefer your own graph? Paste an
+          API-format workflow with <code>{{prompt}}</code> in it and Inkwell will use that instead.</p>
+        </div>
+        <div class="card">
+          <h5>AUTOMATIC1111 / SD.Next</h5>
+          <p>Start it with <code>--api</code> and point Inkwell at <code>127.0.0.1:7860</code>.
+          One request, one picture back.</p>
+        </div>
+        <div class="card">
+          <h5>Ollama</h5>
+          <p>Ollama gained image generation in January 2026, but macOS only for now. The slot is
+          there and works on a Mac; on Windows and Linux use ComfyUI until it lands.</p>
+        </div>
+      </div>
+
+      <div class="note-box">
+        <p><b>Inkwell does not install any of this for you, and can't draw without it.</b> Image
+        generation is a separate program with its own multi-gigabyte model files. If you haven't got
+        one running, everything else in a picture book still works — the interview, the page plan,
+        the words, the visual bible, the written prompts — you just take those prompts elsewhere, or
+        draw the pictures yourself and drop them in. The Art panel has always accepted your own
+        files, and a scanned crayon drawing is a perfectly good illustration.</p>
+      </div>
+
+      <p class="col">
+        Drawn pictures are saved into the book's own folder, beside the words, as ordinary PNGs.
+        They flow into the Pages view at the real trim, print to PDF, and export into the EPUB.
+        Nothing about an illustrated book is trapped anywhere.
+      </p>
     </section>
 
     <hr />

@@ -65,7 +65,7 @@
         <div id="bookList" class="booklist"></div>
 
         <div class="side-head">
-          <span class="side-label">Chapters</span>
+          <span class="side-label" id="railLabel">Chapters</span>
           <button class="iconbtn sm" id="addChapterBtn" title="Add chapter">＋</button>
         </div>
         <div id="chapterList" class="chapterlist"></div>
@@ -89,18 +89,35 @@
               <div id="libList" class="libcards"></div>
               <div class="card newbook">
                 <h2>Start a new book</h2>
+
+                <div class="kindpick" id="nb-kind">
+                  <button type="button" class="kindcard on" data-kind="novel">
+                    <span class="kc-icon">▤</span>
+                    <span class="kc-label">Novel or short story</span>
+                    <span class="kc-hint">Chapters, acts, tens of thousands of words.</span>
+                  </button>
+                  <button type="button" class="kindcard" data-kind="picture">
+                    <span class="kc-icon">✦</span>
+                    <span class="kc-label">Picture book</span>
+                    <span class="kc-hint">Spreads, pictures, a few hundred words, read aloud.</span>
+                  </button>
+                </div>
+
                 <label>Working title<input id="nb-title" placeholder="e.g. The Cartographer's Debt" /></label>
                 <label>Author name<input id="nb-author" placeholder="Your pen name" /></label>
-                <label>Genre<input id="nb-genre" placeholder="e.g. literary mystery, cozy fantasy" /></label>
+                <label class="novelonly">Genre<input id="nb-genre" placeholder="e.g. literary mystery, cozy fantasy" /></label>
                 <label>Premise — the seed of your story
                   <textarea id="nb-premise" rows="3" placeholder="A disgraced mapmaker discovers the maps she forges are quietly rewriting the real world…"></textarea>
                 </label>
-                <div class="row">
+                <div class="row novelonly">
                   <label class="half">Point of view
                     <select id="nb-pov"><option>Third person limited</option><option>Third person omniscient</option><option>First person</option><option>Second person</option></select>
                   </label>
                   <label class="half">Tense<select id="nb-tense"><option>Past</option><option>Present</option></select></label>
                 </div>
+                <label class="pictureonly" hidden>Who it's for — this sets length and vocabulary
+                  <select id="nb-age"></select>
+                </label>
                 <button class="btn primary block" id="createBookBtn">Create &amp; start planning →</button>
               </div>
             </div>
@@ -138,8 +155,8 @@
             <div class="listwrap" id="listWrap" hidden></div>
 
             <div class="emptyOutline" id="emptyOutline" hidden>
-              <h2>No outline yet</h2>
-              <p>Answer a few questions in the interview panel, then build the spine of your book.</p>
+              <h2 id="emptyOutlineTitle">No outline yet</h2>
+              <p id="emptyOutlineHint">Answer a few questions in the interview panel, then build the spine of your book.</p>
               <button class="btn primary" id="buildOutlineBtn">Build outline &amp; bible →</button>
               <div class="planerr" id="outlineErr" hidden></div>
             </div>
@@ -173,6 +190,21 @@
               <button class="btn ghost block" data-action="describe">Describe / set the scene</button>
               <input id="ai-instruction" class="instruction" placeholder="Optional direction (e.g. 'raise the tension')" />
             </div>
+
+            <!-- Picture books: the other half of the spread. -->
+            <div class="illus pictureonly" id="illusPanel" hidden>
+              <div class="illus-head"><span class="side-label">The picture</span><span class="submeta" id="illusState"></span></div>
+              <label class="illus-label">What this spread shows
+                <textarea id="ill-art" rows="2" placeholder="Mila, very small, at the bottom of a staircase that goes up out of the frame."></textarea>
+              </label>
+              <button class="btn gold-ghost block" id="ill-prompt-btn">✦ Write the image prompt</button>
+              <label class="illus-label">Prompt sent to the image model
+                <textarea id="ill-prompt" rows="4" placeholder="Generated from the words above, the locked style and your characters' looks — edit it freely."></textarea>
+              </label>
+              <button class="btn primary block" id="ill-draw-btn">🎨 Draw this spread</button>
+              <div class="illus-preview" id="illusPreview" hidden></div>
+              <div class="planerr" id="illusErr" hidden></div>
+            </div>
             <div class="notes-composer" id="notesComposer" hidden>
               <div class="nc-head"><span id="nc-title">Your notes on this passage</span><button class="iconbtn sm" id="nc-close">✕</button></div>
               <div class="nc-excerpt" id="nc-excerpt"></div>
@@ -204,6 +236,16 @@
             <section class="bible-section">
               <div class="bible-head"><h3>Locations</h3><button class="iconbtn sm" data-add="locations">＋</button></div>
               <div id="locList" class="entrylist"></div>
+            </section>
+            <section class="bible-section pictureonly" id="visualSection" hidden>
+              <div class="bible-head">
+                <h3>The look</h3>
+                <button class="btn gold-ghost sm" id="visualBibleBtn">✦ Set the look</button>
+              </div>
+              <p class="submeta">One style line goes on the end of every illustration prompt. That repetition is the only reason your characters stay the same shape from page to page.</p>
+              <label>Illustration style<textarea id="bi-visual" rows="2" placeholder="soft watercolour with loose ink outlines, warm afternoon palette, generous white space"></textarea></label>
+              <label>Palette (comma-separated)<input id="bi-palette" placeholder="ochre, dusty rose, sea green, cream" /></label>
+              <label>The refrain — the line the book keeps coming back to<input id="bi-refrain" placeholder="…and still the light did not come on." /></label>
             </section>
             <section class="bible-section">
               <label>Themes (comma-separated)<input id="bi-themes" /></label>
@@ -484,6 +526,42 @@
             <input type="password" id="set-cloud-key" placeholder="sk-…" autocomplete="off" />
           </label>
           <div class="cloudhint" id="cloudHint"></div>
+        </div>
+      </section>
+
+      <section class="setsec">
+        <h3>Illustration</h3>
+        <p class="sethint">For picture books. Inkwell writes the prompt with your local model, then sends it to an image generator running on your own machine — ComfyUI or AUTOMATIC1111. Nothing leaves the house, and the pictures are saved inside the book's own folder.</p>
+
+        <label class="setcheck"><input type="checkbox" id="set-image-enabled"> Draw illustrations with a local image generator</label>
+
+        <div class="runcard secondary" id="imageBox" hidden>
+          <label class="setrow">Backend
+            <select id="set-image-backend"></select>
+          </label>
+          <div class="cloudhint" id="imageHint"></div>
+          <label class="setrow">Address
+            <input type="text" id="set-image-base" placeholder="http://127.0.0.1:8188" />
+          </label>
+          <label class="setrow">Checkpoint / model
+            <select id="set-image-model"><option value="">— not connected —</option></select>
+          </label>
+          <label class="setrow">Picture size
+            <select id="set-image-size"></select>
+          </label>
+          <div class="setrow slider"><span>Steps</span><input type="range" id="set-image-steps" min="8" max="60" step="1"><output id="out-image-steps"></output></div>
+          <label class="setrow">Always avoid
+            <input type="text" id="set-image-negative" placeholder="text, watermark, extra fingers" />
+          </label>
+          <details class="setdetails">
+            <summary>Use my own ComfyUI workflow</summary>
+            <p class="sethint">Paste a workflow exported in <em>API format</em>. Inkwell substitutes <code>{{prompt}}</code>, <code>{{negative}}</code>, <code>{{seed}}</code>, <code>{{steps}}</code>, <code>{{width}}</code> and <code>{{height}}</code> wherever you put them. Leave empty to use the built-in one.</p>
+            <textarea id="set-image-workflow" rows="4" placeholder='{"3": {"class_type": "KSampler", …}}'></textarea>
+          </details>
+          <div class="setrow">
+            <button class="btn ghost sm" id="set-image-test">Test connection</button>
+            <span class="submeta" id="imageStatus"></span>
+          </div>
         </div>
       </section>
     </div>

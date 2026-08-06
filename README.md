@@ -1,6 +1,6 @@
 # 🖋️ Inkwell
 
-Your own local, private AI writing studio for novels & short stories. Runs entirely
+Your own local, private AI writing studio for novels, short stories and picture books. Runs entirely
 on your machine against your own [Ollama](https://ollama.com) models — no API keys,
 no per-word cost, nothing leaves your computer. Exports **KDP-ready EPUB** for Kindle.
 
@@ -63,6 +63,24 @@ Built as a smarter, personal alternative to Sudowrite. The difference is the
   oval, or **the artwork's own outline**, traced from the transparent edges of a PNG so
   the text hugs the shape itself. Captions, frames, tilt, bleeds. Upload a font file and
   it's used on the page and embedded in the EPUB.
+- **Picture books, not just novels** — pick the kind of book when you start one and the
+  whole app changes shape. The unit becomes a **spread** (two facing pages, one picture, a
+  line or two of text), the interview asks about the page turn and the refrain instead of
+  the midpoint reversal, and the page starts square. The planner lays out all fourteen
+  spreads in one pass — the words on each, plus a note on what the picture shows — and the
+  writing prompt carries a real word budget (12 words for a board book, 45 for a picture
+  book, 90 for an early reader) so the model can't bury it under a page of novel. The words
+  and the pictures are explicitly told to carry different halves.
+- **A locked visual bible, and pictures drawn locally** — one style line for the whole book,
+  a fixed palette, and per character a physical description of the one unmistakable thing
+  they always have. Every image prompt copies that description in verbatim and ends on the
+  same style line — which is the only reason your protagonist doesn't change shape between
+  pages. Your local model writes the prompt; an image generator **you already run** draws it:
+  **ComfyUI**, **AUTOMATIC1111 / SD.Next**, or **Ollama** (macOS only for image generation as
+  of early 2026). Bring your own ComfyUI workflow if you'd rather. Pictures are saved into the
+  book's own folder as ordinary PNGs and flow into Pages, print and EPUB. **No image backend
+  installed? Everything else still works** — you get the written prompts to take elsewhere,
+  or you draw the pictures yourself and drop them in.
 - **Works from your phone** — icon rail becomes a tab bar, panels become drawers, the
   outline map takes touch. Run it on your desktop and open it from anywhere on your
   network (see *Reading & writing from your phone* below).
@@ -114,6 +132,13 @@ ollama pull mistral-nemo
 
 Model names move — `ollama.com/library` has the current releases, and `ollama list`
 shows what you already have.
+
+**Optional, for drawing picture books:** an image generator running on your own machine —
+[ComfyUI](https://github.com/comfyanonymous/ComfyUI) (the usual choice on Windows with an
+NVIDIA card) or [AUTOMATIC1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
+started with `--api`. Inkwell doesn't install or bundle either one. Without one you can
+still plan, write and design a picture book — you just get the illustration prompts to
+take elsewhere, or you drop in your own artwork.
 
 ## Run
 
@@ -245,6 +270,12 @@ folder (not in browser storage, so it survives cache clears):
   read automatically, and whether dictation is corrected against the story bible. Dictation
   needs a browser that can transcribe on-device (Chrome or Edge today); reading aloud works
   everywhere. Inkwell will tell you which you've got.
+
+- **Illustration** — for picture books. Which image backend (ComfyUI, AUTOMATIC1111 /
+  SD.Next, or Ollama), its address, the checkpoint, picture size, step count, a global
+  "always avoid" list, and optionally your own ComfyUI workflow in API format. **Test
+  connection** tells you whether it answered and lists the checkpoints it found. Off by
+  default — nothing tries to reach an image generator unless you turn this on.
 
 Page design is per-book rather than global, and lives in the Pages tab.
 
