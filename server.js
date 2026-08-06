@@ -8,9 +8,11 @@ import os from 'node:os';
 import { providerFor, cloudProvider, cloudConfigured, ollama, ollamaDiagnose, OLLAMA_HOST, CLOUD_SERVICES, CLOUD_PREFIX } from './lib/ollama.js';
 import * as store from './lib/store.js';
 import { systemPrompt, buildWriteMessages } from './lib/context.js';
-import { interviewMessages, outlineMessages, bibleSeedMessages, summaryMessages, nextQuestionMessages, refineOutlineMessages, designMessages } from './lib/prompts.js';
+import { interviewMessages, outlineMessages, bibleSeedMessages, summaryMessages, nextQuestionMessages, refineOutlineMessages, designMessages, spreadPlanMessages, visualBibleMessages, illustrationMessages } from './lib/prompts.js';
 import { buildEpub } from './lib/epub.js';
 import { catalog, presetDesign, normalizeDesign, findTrim, findFont, ENUMS } from './lib/design.js';
+import { kindList, kindOf, isPicture, targets } from './lib/kinds.js';
+import { IMAGE_BACKENDS, IMAGE_SIZES, sizeById, imagesConfigured, imageProvider } from './lib/imagegen.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -260,6 +262,89 @@ app.delete('/api/books/:id/assets/:assetId', asyncH(async (req, res) => {
   res.status(ok ? 200 : 404).json({ ok });
 }));
 
+// ---- Illustrated books ----
+app.get('/api/kinds', (_req, res) => res.json({ kinds: kindList() }));
+app.get('/api/image/backends', (_req, res) => res.json({ backends: IMAGE_BACKENDS, sizes: IMAGE_SIZES }));
+
+app.get('/api/image/health', asyncH(async (_req, res) => {
+  const settings = await store.getSettings();
+  if (!imagesConfigured(settings)) return res.json({ enabled: false });
+  const p = imageProvider(settings);
+  const h = await p.health();
+  res.json({ enabled: true, backend: settings.image.backend, host: p.base, ...h, models: h.ok ? await p.models() : [] });
+}));
+
+// Plan a picture book as spreads: the words on each page, and a note on what
+// the picture shows. Kept separate from the novel outline because the shape,
+// the length and the craft are all different.
+app.post('/api/plan/spreads', asyncH(async (req, res) => {
+  const { model, premise, answers, spreads, wordsPerSpread, ageLabel } = req.body || {};
+  const text = await (await P(model)).chatOnce({
+    model, format: 'json', options: await planOptions(),
+    messages: spreadPlanMessages({ premise, answers, spreads: spreads || 14, wordsPerSpread: wordsPerSpread || 45, ageLabel }),
+  });
+  res.json(parseJsonLoose(text) || { spreads: [], synopsis: '', refrain: '' });
+}));
+
+// The locked look: one style line for the whole book plus a fixed physical
+// description per character. This is what stops the protagonist changing shape
+// between pages.
+app.post('/api/plan/visual', asyncH(async (req, res) => {
+  const { model, premise, answers, characters, brief } = req.body || {};
+  const text = await (await P(model)).chatOnce({
+    model, format: 'json', options: await planOptions(),
+    messages: visualBibleMessages({ premise, answers, characters, brief }),
+  });
+  const d = parseJsonLoose(text) || {};
+  res.json({
+    style: String(d.style || '').slice(0, 400),
+    palette: Array.isArray(d.palette) ? d.palette.slice(0, 8).map((x) => String(x).slice(0, 40)) : [],
+    characters: Array.isArray(d.characters)
+      ? d.characters.slice(0, 20).map((c) => ({ name: String(c.name || '').slice(0, 80), look: String(c.look || '').slice(0, 400) }))
+      : [],
+  });
+}));
+
+// Turn one spread into an image prompt, carrying the locked style and the
+// character looks in verbatim.
+app.post('/api/illustrate/prompt', asyncH(async (req, res) => {
+  const { model, text, art, style, palette, looks, previous } = req.body || {};
+  const out = await (await P(model)).chatOnce({
+    model, format: 'json', options: await planOptions(),
+    messages: illustrationMessages({ text, art, style, palette, looks, previous }),
+  });
+  const d = parseJsonLoose(out) || {};
+  res.json({ prompt: String(d.prompt || '').slice(0, 2000), negative: String(d.negative || '').slice(0, 600) });
+}));
+
+// Render a prompt and keep the result in the book's own assets folder.
+app.post('/api/books/:id/illustrate', asyncH(async (req, res) => {
+  const settings = await store.getSettings();
+  if (!imagesConfigured(settings)) {
+    return res.status(400).json({ error: 'No image backend is configured. Settings → Illustration.' });
+  }
+  const { prompt, negative, seed, name } = req.body || {};
+  if (!prompt || !String(prompt).trim()) return res.status(400).json({ error: 'Nothing to draw — the prompt is empty.' });
+
+  const size = sizeById(settings.image.size);
+  const provider = imageProvider(settings);
+  const img = await provider.generate({
+    prompt: String(prompt).slice(0, 2000),
+    negative: [settings.image.negative, negative].filter(Boolean).join(', '),
+    width: size.w, height: size.h,
+    steps: Math.min(80, Math.max(1, +settings.image.steps || 28)),
+    seed: Number.isFinite(+seed) ? +seed : -1,
+    model: settings.image.model,
+    workflow: settings.image.workflow ? parseJsonLoose(settings.image.workflow) : null,
+  });
+
+  const asset = await store.addAsset(req.params.id, {
+    name: name || 'illustration', kind: 'image', mime: img.mime || 'image/png',
+    buffer: img.buffer, w: size.w, h: size.h,
+  });
+  res.json({ asset, seed: img.seed });
+}));
+
 // ---- Plan mode ----
 app.post('/api/plan/interview', asyncH(async (req, res) => {
   const { model, premise, genre, pov, tense } = req.body || {};
@@ -270,10 +355,10 @@ app.post('/api/plan/interview', asyncH(async (req, res) => {
 
 // One question at a time, aware of everything already said.
 app.post('/api/plan/next-question', asyncH(async (req, res) => {
-  const { model, premise, genre, pov, tense, transcript } = req.body || {};
+  const { model, premise, genre, pov, tense, transcript, kind } = req.body || {};
   const text = await (await P(model)).chatOnce({
     model, format: 'json', options: await planOptions(),
-    messages: nextQuestionMessages({ premise, genre, pov, tense, transcript }),
+    messages: nextQuestionMessages({ premise, genre, pov, tense, transcript, kind: kindOf({ kind }) }),
   });
   const data = parseJsonLoose(text) || {};
   res.json({ question: data.question || '', probing: data.probing || '' });

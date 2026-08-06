@@ -89,6 +89,46 @@ const chapters = () => state.book?.outline.chapters || [];
 const acts = () => state.book?.outline.acts || [];
 const currentChapter = () => chapters().find((c) => c.id === state.chapterId) || null;
 
+// ---------- book kinds ----------
+// A spread is stored as a chapter — same id, same file, same place in the
+// outline — so everything downstream keeps working. Only the words the app puts
+// on screen change, and these two helpers are how.
+const AGE_BANDS = [
+  { id: 'board', label: 'Board book · ages 0–3', spreads: 8, words: 12 },
+  { id: 'picture', label: 'Picture book · ages 3–6', spreads: 14, words: 45 },
+  { id: 'early', label: 'Early reader · ages 5–8', spreads: 16, words: 90 },
+];
+const isPicture = (b = state.book) => b?.meta?.kind === 'picture';
+const bandOf = (b = state.book) => AGE_BANDS.find((a) => a.id === b?.meta?.ageBand) || AGE_BANDS[1];
+// unit('Chapter') -> 'Chapter' or 'Spread', keeping the caller's capitalisation.
+function unit(word = 'chapter', plural = false) {
+  const base = isPicture() ? 'spread' : 'chapter';
+  const w = plural ? base + 's' : base;
+  return /^[A-Z]/.test(word) ? w[0].toUpperCase() + w.slice(1) : w;
+}
+const newBookKind = () => document.querySelector('#nb-kind .kindcard.on')?.dataset.kind || 'novel';
+
+function syncNewBookForm() {
+  const pic = newBookKind() === 'picture';
+  els('.newbook .pictureonly').forEach((e) => (e.hidden = !pic));
+  els('.newbook .novelonly').forEach((e) => (e.hidden = pic));
+  $('nb-premise').placeholder = pic
+    ? 'A small bear who is certain there is something under the bed, and is right, and it is lonelier than he is…'
+    : 'A disgraced mapmaker discovers the maps she forges are quietly rewriting the real world…';
+}
+
+// Show or hide everything marked as belonging to one kind of book.
+function applyKindChrome() {
+  const pic = isPicture();
+  els('.pictureonly').forEach((e) => { if (!e.closest('.newbook')) e.hidden = !pic; });
+  els('.novelonly').forEach((e) => { if (!e.closest('.newbook')) e.hidden = pic; });
+  $('railLabel').textContent = unit('Chapters', true);
+  $('addChapterBtn').title = `Add ${unit('chapter')}`;
+  $('addChapterLink').textContent = `＋ Add ${unit('chapter')}`;
+  $('foldMemoryBtn').textContent = `↻ Fold in written ${unit('chapters', true)}`;
+  document.querySelector('.railbtn[data-nav="outline"] span').textContent = pic ? 'Spreads' : 'Outline';
+}
+
 // ============================================================
 //  BOOT
 // ============================================================
@@ -211,8 +251,78 @@ function openSettings() {
   $('set-model').value = s.defaultModel || state.model;
   renderCloudSettings();
   renderVoiceSettings();
+  renderImageSettings();
   renderConn();
   $('settingsModal').hidden = false;
+}
+
+// ---------- illustration backends ----------
+async function imageCatalog() {
+  if (!state.imageCatalog) {
+    try { state.imageCatalog = await api('/image/backends'); }
+    catch { state.imageCatalog = { backends: [], sizes: [] }; }
+  }
+  return state.imageCatalog;
+}
+
+async function renderImageSettings() {
+  const i = state.settings.image || {};
+  const { backends, sizes } = await imageCatalog();
+
+  const bsel = $('set-image-backend');
+  bsel.innerHTML = backends.map((b) => `<option value="${esc(b.id)}">${esc(b.label)}</option>`).join('');
+  bsel.value = i.backend || 'comfyui';
+
+  const ssel = $('set-image-size');
+  ssel.innerHTML = sizes.map((s) => `<option value="${esc(s.id)}">${esc(s.label)}</option>`).join('');
+  ssel.value = i.size || 'square';
+
+  $('set-image-enabled').checked = !!i.enabled;
+  $('imageBox').hidden = !i.enabled;
+  $('set-image-base').value = i.baseUrl || '';
+  $('set-image-steps').value = i.steps ?? 28;
+  $('out-image-steps').textContent = i.steps ?? 28;
+  $('set-image-negative').value = i.negative || '';
+  $('set-image-workflow').value = i.workflow || '';
+  imageBackendHint();
+
+  // The checkpoint list can only come from a running backend, so show what's
+  // saved until a test connection fills the real list in.
+  const msel = $('set-image-model');
+  msel.innerHTML = i.model
+    ? `<option value="${esc(i.model)}">${esc(i.model)}</option>`
+    : '<option value="">— test the connection to list models —</option>';
+  msel.value = i.model || '';
+}
+
+async function imageBackendHint() {
+  const { backends } = await imageCatalog();
+  const b = backends.find((x) => x.id === $('set-image-backend').value);
+  $('imageHint').textContent = b?.hint || '';
+  $('set-image-base').placeholder = b?.defaultBaseUrl || '';
+}
+
+async function testImageBackend() {
+  const status = $('imageStatus');
+  status.textContent = 'Checking…';
+  try {
+    // Save first: health is checked server-side against the stored config, so
+    // an untested edit in the box would otherwise be ignored.
+    state.settings = await api('/settings', { method: 'PUT', body: collectSettings() });
+    const h = await api('/image/health');
+    if (!h.enabled) return (status.innerHTML = '<span class="bad">● turned off</span>');
+    if (!h.ok) return (status.innerHTML = `<span class="bad">● ${esc(h.reason || 'no answer')}</span>`);
+
+    const msel = $('set-image-model');
+    const keep = state.settings.image.model;
+    msel.innerHTML = h.models.length
+      ? h.models.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`).join('')
+      : '<option value="">— no checkpoints found —</option>';
+    if (h.models.includes(keep)) msel.value = keep;
+    status.innerHTML = `<span class="ok">● connected</span> at ${esc(h.host)}${h.models.length ? ` · ${h.models.length} checkpoint${h.models.length === 1 ? '' : 's'}` : ''}`;
+  } catch (e) {
+    status.innerHTML = `<span class="bad">● ${esc(e.message)}</span>`;
+  }
 }
 
 async function renderVoiceSettings() {
@@ -300,6 +410,17 @@ function collectSettings() {
     baseUrl: $('set-cloud-base').value.trim(),
     // Unchanged means the masked value goes back; the server keeps what it has.
     apiKey: $('set-cloud-key').value,
+  };
+  s.image = {
+    ...s.image,
+    enabled: $('set-image-enabled').checked,
+    backend: $('set-image-backend').value,
+    baseUrl: $('set-image-base').value.trim(),
+    model: $('set-image-model').value,
+    size: $('set-image-size').value,
+    steps: +$('set-image-steps').value,
+    negative: $('set-image-negative').value.trim(),
+    workflow: $('set-image-workflow').value.trim(),
   };
   return s;
 }
@@ -536,7 +657,7 @@ function renderLibrary() {
   l.innerHTML = state.books.length
     ? state.books.map((b) => `<div class="libcard" data-open="${b.id}">
         <div><h4>${esc(b.title || 'Untitled')}</h4>
-        <div class="m">${esc(b.author || 'Unknown')} · ${b.chapterCount || 0} chapters · edited ${new Date(b.updatedAt).toLocaleDateString()}</div></div>
+        <div class="m">${esc(b.author || 'Unknown')} · ${b.chapterCount || 0} ${b.kind === 'picture' ? 'spreads' : 'chapters'} · edited ${new Date(b.updatedAt).toLocaleDateString()}</div></div>
         <button class="iconbtn del" data-del="${b.id}" title="Delete">🗑</button></div>`).join('')
     : '<div class="empty">No books yet. Create one to the right →</div>';
 }
@@ -545,7 +666,7 @@ function renderSidebarBooks() {
   $('bookList').innerHTML = state.books.map((b) => `
     <div class="bookrow ${state.book?.meta.id === b.id ? 'on' : ''}" data-open="${b.id}">
       <svg viewBox="0 0 24 24"><path d="M4 4h7a2 2 0 012 2v14a2 2 0 00-2-2H4z"/><path d="M20 4h-7a2 2 0 00-2 2v14a2 2 0 012-2h7z"/></svg>
-      <div><div class="bt">${esc(b.title || 'Untitled')}</div><div class="bm">${b.chapterCount || 0} chapters</div></div>
+      <div><div class="bt">${esc(b.title || 'Untitled')}</div><div class="bm">${b.chapterCount || 0} ${b.kind === 'picture' ? 'spreads' : 'chapters'}</div></div>
     </div>`).join('');
 }
 
@@ -554,6 +675,7 @@ async function openBook(id) {
   localStorage.setItem('inkwell.lastBook', id);
   state.chapterId = chapters()[0]?.id || null;
   $('bookTitleInput').value = state.book.meta.title || '';
+  applyKindChrome();
   syncPageView();
   renderSidebarBooks();
   renderChapterRail();
@@ -600,9 +722,17 @@ function actColor(actId) {
 
 function renderOutline() {
   const chs = chapters();
+  const pic = isPicture();
+  document.querySelector('#view-outline h1').textContent = pic ? 'The page plan' : 'Outline';
   $('outlineMeta').textContent = chs.length
-    ? `${chs.length} chapters · ${acts().length} acts`
-    : 'No chapters yet';
+    ? (pic ? `${chs.length} spreads · about ${bandOf().words} words each` : `${chs.length} chapters · ${acts().length} acts`)
+    : `No ${unit('chapters', true)} yet`;
+  $('emptyOutlineTitle').textContent = pic ? 'No page plan yet' : 'No outline yet';
+  $('emptyOutlineHint').textContent = pic
+    ? `Answer a few questions in the interview panel, then lay the book out spread by spread.`
+    : 'Answer a few questions in the interview panel, then build the spine of your book.';
+  $('buildOutlineBtn').textContent = pic ? 'Plan the spreads →' : 'Build outline & bible →';
+  $('rebuildBtn').textContent = pic ? '↻ Re-plan from interview' : '↻ Rebuild from interview';
   $('emptyOutline').hidden = chs.length > 0;
   $('mapWrap').hidden = !chs.length || state.mapMode !== 'map';
   $('listWrap').hidden = !chs.length || state.mapMode !== 'list';
@@ -873,7 +1003,7 @@ async function askNext() {
       method: 'POST',
       body: {
         model: state.model, premise: m.premise, genre: m.genre, pov: m.pov, tense: m.tense,
-        transcript: state.book.plan.messages,
+        transcript: state.book.plan.messages, kind: m.kind,
       },
     });
     if (!data.question) throw new Error('The model returned an empty question — try a more capable model.');
@@ -1095,8 +1225,9 @@ async function buildOutline({ rebuild = false, btn = $('buildOutlineBtn') } = {}
   const m = state.book.meta;
   const answers = transcriptPairs();
   if (!answers.length) {
-    return showPlanError('outlineErr', new Error('Answer at least one interview question first — that\'s what the outline is built from.'), again);
+    return showPlanError('outlineErr', new Error(`Answer at least one interview question first — that's what the ${isPicture() ? 'page plan' : 'outline'} is built from.`), again);
   }
+  if (isPicture()) return buildSpreadPlan({ rebuild, btn, answers, again });
 
   // Rebuilding over existing work: confirm, and reassure about written prose.
   if (rebuild && chapters().length) {
@@ -1157,16 +1288,259 @@ async function buildOutline({ rebuild = false, btn = $('buildOutlineBtn') } = {}
 }
 
 // ============================================================
+//  PICTURE BOOKS
+// ============================================================
+// The page plan. Each spread becomes a chapter on disk — same id, same prose
+// file — so the editor, the Pages view and the EPUB exporter need to know
+// nothing about picture books at all.
+async function buildSpreadPlan({ rebuild, btn, answers, again }) {
+  const m = state.book.meta;
+  const band = bandOf();
+
+  if (rebuild && chapters().length) {
+    const written = chapters().filter((c) => wc(c.content) > 0).length;
+    const msg = written
+      ? `Re-plan all ${band.spreads} spreads from your ${answers.length} interview answers?\n\nThe ${written} spread(s) you've already written will be KEPT (matched by title).`
+      : `Re-plan the book from your ${answers.length} interview answers?\n\nThis replaces the current ${chapters().length} spreads. You haven't written any words yet, so nothing is lost.`;
+    if (!confirm(msg)) return;
+  }
+
+  const setBtn = (t) => (btn.innerHTML = `<span class="spin"></span> ${t}`);
+  const original = btn.textContent;
+  btn.disabled = true;
+  try {
+    setBtn('Planning the spreads…');
+    const plan = await api('/plan/spreads', {
+      method: 'POST',
+      body: {
+        model: state.model, premise: m.premise, answers,
+        spreads: band.spreads, wordsPerSpread: band.words, ageLabel: band.label,
+      },
+    });
+    if (!plan.spreads?.length) {
+      throw new Error('The model returned an empty page plan. Try a more capable model, or answer another interview question first.');
+    }
+
+    setBtn('Finding the characters…');
+    const bibleGen = await api('/plan/bible', {
+      method: 'POST',
+      body: { model: state.model, premise: m.premise, genre: 'picture book', answers, synopsis: plan.synopsis },
+    }).catch(() => ({}));
+
+    // One act, because a picture book has no acts — but the act bar and the
+    // map both expect at least one, so give them the whole book.
+    const newActs = [{ id: 'act-1', title: 'The book', subtitle: `${plan.spreads.length} spreads`, color: ACT_COLORS[0] }];
+    const raw = plan.spreads.map((s, i) => ({
+      title: cleanTitle(s.title || `Spread ${i + 1}`),
+      summary: s.art || '',
+      beats: [], act: 1,
+    }));
+    const { chapters: newChs, preservedIds } = chaptersPreservingProse(newActs, raw);
+    // Carry the art note and the actual page text across by position.
+    newChs.forEach((c, i) => { if (plan.spreads[i]) c.art = plan.spreads[i].art || ''; });
+
+    const mergedBible = {
+      ...state.book.bible,
+      characters: mergeByName(state.book.bible.characters, bibleGen.characters),
+      locations: mergeByName(state.book.bible.locations, bibleGen.locations),
+      themes: [...new Set([...(state.book.bible.themes || []), ...(bibleGen.themes || [])])],
+      refrain: state.book.bible.refrain || plan.refrain || '',
+      tone: state.book.bible.tone || bibleGen.tone || '',
+    };
+
+    await api(`/books/${m.id}/meta`, { method: 'PATCH', body: { synopsis: plan.synopsis || '', outlineBuiltAnswers: answers.length } });
+    await api(`/books/${m.id}/outline`, { method: 'PUT', body: { acts: newActs, chapters: newChs } });
+    await api(`/books/${m.id}/bible`, { method: 'PUT', body: mergedBible });
+
+    state.book = await api('/books/' + m.id);
+
+    // The plan already contains the words for each spread, so write them in
+    // rather than leaving fourteen blank pages the author has to fill twice.
+    setBtn('Writing the pages…');
+    const stored = chapters();
+    for (let i = 0; i < stored.length; i++) {
+      const words = plan.spreads[i]?.text?.trim();
+      if (!words || preservedIds.has(stored[i].id) || wc(stored[i].content) > 0) continue;
+      await api(`/books/${m.id}/chapters/${stored[i].id}`, { method: 'PUT', body: { content: words } });
+    }
+
+    state.book = await api('/books/' + m.id);
+    state.chapterId = chapters()[0]?.id || null;
+    autoLayout(); saveOutlineDebounced();
+    renderChapterRail(); renderQuote(); renderContext(); renderOutline();
+    await loadLibrary();
+    toast(`${rebuild ? 'Re-planned' : 'Planned'} ${plan.spreads.length} spreads${plan.refrain ? ` around “${plan.refrain}”` : ''}.`, 'ok');
+  } catch (e) {
+    showPlanError('outlineErr', e, again);
+  } finally {
+    btn.disabled = false; btn.textContent = original || 'Plan the spreads →';
+  }
+}
+
+// The locked look. Style, palette and one fixed physical description per
+// character — the whole defence against a protagonist who changes shape.
+async function buildVisualBible() {
+  const btn = $('visualBibleBtn');
+  if (!ensureModel('outlineErr', buildVisualBible)) return;
+  const m = state.book.meta;
+  const original = btn.textContent;
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Art-directing…';
+  // renderBible repaints every field from state, so anything typed but not yet
+  // saved has to be folded into state first or it vanishes when this finishes.
+  const brief = $('bi-visual').value.trim();
+  state.book.bible = collectBible();
+  try {
+    const v = await api('/plan/visual', {
+      method: 'POST',
+      body: {
+        model: state.model, premise: m.premise, answers: transcriptPairs(),
+        characters: state.book.bible.characters || [],
+        brief,
+      },
+    });
+    // The model only fills the blanks — never overwrites the author.
+    if (v.style && !brief) state.book.bible.visualStyle = v.style;
+    if (v.palette?.length && !state.book.bible.palette.length) state.book.bible.palette = v.palette;
+    const looks = new Map((v.characters || []).map((c) => [(c.name || '').trim().toLowerCase(), c.look]));
+    state.book.bible.characters = (state.book.bible.characters || []).map((c) => ({
+      ...c, look: c.look || looks.get((c.name || '').trim().toLowerCase()) || '',
+    }));
+    // Characters the art director invented but the story bible hadn't recorded.
+    for (const [k, look] of looks) {
+      if (!state.book.bible.characters.some((c) => (c.name || '').trim().toLowerCase() === k)) {
+        const named = v.characters.find((c) => (c.name || '').trim().toLowerCase() === k);
+        state.book.bible.characters.push({ name: named.name, role: 'supporting', description: '', look });
+      }
+    }
+    renderBible();
+    toast('The look is set. Save the bible to keep it.', 'ok');
+  } catch (e) {
+    toast(friendlyError(e).html.replace(/<[^>]+>/g, ''), 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = original;
+  }
+}
+
+// ---------- one spread's picture ----------
+function renderIllustration() {
+  const panel = $('illusPanel');
+  if (!isPicture()) { panel.hidden = true; return; }
+  panel.hidden = false;
+  const ch = currentChapter();
+  $('ill-art').value = ch?.art || '';
+  $('ill-prompt').value = ch?.artPrompt || '';
+  clearPlanError('illusErr');
+
+  const on = !!state.settings?.image?.enabled;
+  $('ill-draw-btn').disabled = !on;
+  $('illusState').textContent = on ? '' : 'no image backend — Settings › Illustration';
+
+  // Show the picture already placed on this spread, if there is one.
+  const place = (state.book.art?.placements || []).find((p) => p.chapterId === ch?.id);
+  const box = $('illusPreview');
+  box.hidden = !place;
+  if (place) {
+    box.innerHTML = `<img src="/api/books/${esc(state.book.meta.id)}/assets/${esc(place.assetId)}/raw" alt="" />
+      <button class="linkbtn" data-redraw>Draw it again</button>`;
+  }
+}
+
+async function writeArtPrompt() {
+  const ch = currentChapter();
+  if (!ch) return;
+  if (!ensureModel('illusErr', writeArtPrompt)) return;
+  const btn = $('ill-prompt-btn');
+  const original = btn.textContent;
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Writing the prompt…';
+  clearPlanError('illusErr');
+  try {
+    const b = state.book.bible;
+    const idx = chapters().findIndex((c) => c.id === ch.id);
+    const out = await api('/illustrate/prompt', {
+      method: 'POST',
+      body: {
+        model: state.model,
+        text: $('editor').value.trim() || ch.content || '',
+        art: $('ill-art').value.trim(),
+        style: b.visualStyle || '',
+        palette: (b.palette || []),
+        looks: (b.characters || []).filter((c) => c.look).map((c) => ({ name: c.name, look: c.look })),
+        previous: idx > 0 ? chapters()[idx - 1].artPrompt || '' : '',
+      },
+    });
+    if (!out.prompt) throw new Error('The model returned an empty prompt.');
+    $('ill-prompt').value = out.prompt;
+    state.illNegative = out.negative || '';
+    await saveSpreadArt();
+  } catch (e) {
+    showPlanError('illusErr', e, writeArtPrompt);
+  } finally {
+    btn.disabled = false; btn.textContent = original;
+  }
+}
+
+// The art note and the prompt live on the chapter, so they survive a reload
+// and feed the next spread's continuity.
+async function saveSpreadArt() {
+  const ch = currentChapter();
+  if (!ch) return;
+  ch.art = $('ill-art').value.trim();
+  ch.artPrompt = $('ill-prompt').value.trim();
+  await api(`/books/${state.book.meta.id}/outline`, {
+    method: 'PUT', body: { acts: acts(), chapters: chapters().map(stripContent) },
+  });
+}
+
+async function drawSpread() {
+  const ch = currentChapter();
+  const prompt = $('ill-prompt').value.trim();
+  if (!ch) return;
+  if (!prompt) return showPlanError('illusErr', new Error('Write the image prompt first.'), writeArtPrompt);
+
+  const btn = $('ill-draw-btn');
+  const original = btn.textContent;
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Drawing… this takes a minute';
+  clearPlanError('illusErr');
+  try {
+    await saveSpreadArt();
+    const { asset } = await api(`/books/${state.book.meta.id}/illustrate`, {
+      method: 'POST',
+      body: { prompt, negative: state.illNegative || '', name: ch.title },
+    });
+
+    // Place it across the top of the spread, replacing whatever was there —
+    // one picture per spread is the form.
+    const current = await api(`/books/${state.book.meta.id}/art`);
+    const rest = (current.placements || []).filter((p) => p.chapterId !== ch.id);
+    state.book.art = await api(`/books/${state.book.meta.id}/art`, {
+      method: 'PUT',
+      body: { placements: [...rest, { assetId: asset.id, chapterId: ch.id, para: 0, side: 'full', width: 100, shape: 'rect', gap: 0.8 }] },
+    });
+    state.book.assets = [...(state.book.assets || []), asset];
+    syncPageView();
+    renderIllustration();
+    if (state.view === 'pages') renderPages({ rebuild: true });
+    toast('Drawn and placed on the spread.', 'ok');
+  } catch (e) {
+    showPlanError('illusErr', e, drawSpread);
+  } finally {
+    btn.disabled = false; btn.textContent = original;
+  }
+}
+
+// ============================================================
 //  WRITE
 // ============================================================
 function renderWrite() {
   if (!state.chapterId) state.chapterId = chapters()[0]?.id || null;
   const ch = currentChapter();
   renderChapterRail();
-  if (!ch) { $('editor').value = ''; $('ed-chapter-title').value = ''; $('ed-chapter-summary').textContent = ''; return; }
+  $('ed-chapter-title').placeholder = unit('Chapter') + ' title';
+  if (!ch) { $('editor').value = ''; $('ed-chapter-title').value = ''; $('ed-chapter-summary').textContent = ''; renderIllustration(); return; }
   $('ed-chapter-title').value = ch.title || '';
   $('ed-chapter-summary').textContent = ch.summary || '';
   $('editor').value = ch.content || '';
+  renderIllustration();
   updateWordcount(); updateSelInfo();
 }
 
@@ -1189,7 +1563,7 @@ const saveChapterDebounced = debounce(async () => {
 
 async function addChapter() {
   const list = chapters().map(stripContent);
-  list.push({ title: `Chapter ${list.length + 1}`, summary: '', beats: [], actId: acts()[0]?.id, x: null, y: null });
+  list.push({ title: `${unit('Chapter')} ${list.length + 1}`, summary: '', beats: [], actId: acts()[0]?.id, x: null, y: null });
   await api(`/books/${state.book.meta.id}/outline`, { method: 'PUT', body: { acts: acts(), chapters: list } });
   state.book = await api('/books/' + state.book.meta.id);
   state.chapterId = chapters().at(-1).id;
@@ -1291,9 +1665,9 @@ async function foldEverything() {
     if (await foldChapter(ch, { force: true })) done++;
   }
   btn.disabled = false;
-  btn.textContent = '↻ Fold in written chapters';
+  btn.textContent = `↻ Fold in written ${unit('chapters', true)}`;
   $('bi-summary').value = state.book.bible.runningSummary || '';
-  toast(done ? `Folded ${done} chapter${done === 1 ? '' : 's'} into memory.` : 'Nothing could be folded in.', done ? 'ok' : 'err');
+  toast(done ? `Folded ${done} ${done === 1 ? unit('chapter') : unit('chapters', true)} into memory.` : 'Nothing could be folded in.', done ? 'ok' : 'err');
 }
 
 // ---------- AI actions ----------
@@ -1301,7 +1675,7 @@ let currentAbort = null;
 
 async function runAI(action) {
   const ch = currentChapter();
-  if (!ch) return toast('Add a chapter first.', 'err');
+  if (!ch) return toast(`Add a ${unit('chapter')} first.`, 'err');
   const editor = $('editor');
   const instruction = $('ai-instruction').value.trim();
 
@@ -1553,21 +1927,30 @@ function renderBible() {
   $('bi-tone').value = b.tone || '';
   $('bi-style').value = b.styleGuide || '';
   $('bi-summary').value = b.runningSummary || '';
+  $('bi-visual').value = b.visualStyle || '';
+  $('bi-palette').value = (b.palette || []).join(', ');
+  $('bi-refrain').value = b.refrain || '';
+  applyKindChrome();
 
+  const u = unit('chapter'), us = unit('chapters', true);
   const { written, folded } = memoryCoverage();
   $('memCoverage').textContent = !written
-    ? 'No chapters long enough to summarise yet.'
+    ? `No ${us} long enough to summarise yet.`
     : folded >= written
-      ? `Up to date — all ${written} written chapter${written === 1 ? '' : 's'} are in here.`
-      : `${written - folded} written chapter${written - folded === 1 ? '' : 's'} not folded in yet.`;
+      ? `Up to date — all ${written} written ${written === 1 ? u : us} are in here.`
+      : `${written - folded} written ${written - folded === 1 ? u : us} not folded in yet.`;
 }
 function renderEntries(id, arr, kind) {
+  // Illustrated books add a "look": the fixed physical description that goes
+  // into every image prompt this character appears in.
+  const look = kind === 'character' && isPicture();
   $(id).innerHTML = arr.map((e, i) => `<div class="entry" data-kind="${kind}" data-i="${i}">
       <button class="iconbtn sm remove" data-rm>✕</button>
       <div class="row2"><input class="ename" data-f="name" placeholder="Name" value="${esc(e.name)}"/>
       ${kind === 'character' ? `<input data-f="role" placeholder="Role" value="${esc(e.role || '')}"/>` : ''}</div>
       <textarea data-f="description" rows="2" placeholder="Description">${esc(e.description || '')}</textarea>
       ${kind === 'character' ? `<textarea data-f="arc" rows="1" placeholder="Character arc">${esc(e.arc || '')}</textarea>` : ''}
+      ${look ? `<textarea class="looks" data-f="look" rows="2" placeholder="How they always look — species, size, hair, and the one thing they always carry">${esc(e.look || '')}</textarea>` : ''}
     </div>`).join('');
 }
 function collectBible() {
@@ -1579,6 +1962,9 @@ function collectBible() {
     characters: grab('charList'), locations: grab('locList'),
     themes: $('bi-themes').value.split(',').map((s) => s.trim()).filter(Boolean),
     tone: $('bi-tone').value, styleGuide: $('bi-style').value, runningSummary: $('bi-summary').value,
+    visualStyle: $('bi-visual').value.trim(),
+    palette: $('bi-palette').value.split(',').map((s) => s.trim()).filter(Boolean),
+    refrain: $('bi-refrain').value.trim(),
   };
 }
 async function saveBible() {
@@ -1592,11 +1978,11 @@ async function saveBible() {
 function renderCards() {
   $('cardGrid').innerHTML = chapters().map((c, i) => `
     <div class="icard" data-node="${c.id}">
-      <div class="in">Chapter ${i + 1}</div>
+      <div class="in">${unit('Chapter')} ${i + 1}</div>
       <div class="it">${esc(c.title || 'Untitled')}</div>
       <div class="is">${esc(c.summary || 'No summary yet.')}</div>
       <div class="iw">${nf(wc(c.content))} words</div>
-    </div>`).join('') || '<div class="empty">No chapters yet.</div>';
+    </div>`).join('') || `<div class="empty">No ${unit('chapters', true)} yet.</div>`;
 }
 
 function renderExport() {
@@ -1605,7 +1991,7 @@ function renderExport() {
   const withProse = chs.filter((c) => wc(c.content) > 0).length;
   $('exportStats').innerHTML = `
     <div class="stat"><div class="v">${nf(total)}</div><div class="k">Words</div></div>
-    <div class="stat"><div class="v">${withProse}/${chs.length}</div><div class="k">Chapters written</div></div>
+    <div class="stat"><div class="v">${withProse}/${chs.length}</div><div class="k">${unit('Chapters', true)} written</div></div>
     <div class="stat"><div class="v">${acts().length}</div><div class="k">Acts</div></div>
     <div class="stat"><div class="v">${Math.max(1, Math.round(total / 250))}</div><div class="k">Est. pages</div></div>`;
 }
@@ -1631,6 +2017,10 @@ function wire() {
     $('set-cloud-base').placeholder = svc?.defaultBaseUrl || '';
     if (!$('set-cloud-base').value.trim()) $('set-cloud-base').value = '';
   });
+  $('set-image-enabled').addEventListener('change', (e) => { $('imageBox').hidden = !e.target.checked; });
+  $('set-image-backend').addEventListener('change', () => { $('set-image-base').value = ''; imageBackendHint(); });
+  $('set-image-steps').addEventListener('input', (e) => ($('out-image-steps').textContent = e.target.value));
+  $('set-image-test').onclick = testImageBackend;
   $('settingsModal').onclick = (e) => { if (e.target.id === 'settingsModal') $('settingsModal').hidden = true; };
   // live-preview every slider as it moves
   for (const [input, output, group, key, fmt] of SET_FIELDS) {
@@ -1669,6 +2059,19 @@ function wire() {
   $('bookList').onclick = openHandler;
   $('newBookBtn').onclick = () => go('home');
 
+  // New-book kind picker. The form rearranges itself rather than asking for
+  // POV and tense on a book that will be forty words long.
+  $('nb-age').innerHTML = AGE_BANDS.map((a) =>
+    `<option value="${esc(a.id)}">${esc(a.label)} — about ${a.spreads} spreads</option>`).join('');
+  $('nb-age').value = 'picture';
+  $('nb-kind').onclick = (e) => {
+    const card = e.target.closest('[data-kind]');
+    if (!card) return;
+    els('#nb-kind .kindcard').forEach((c) => c.classList.toggle('on', c === card));
+    syncNewBookForm();
+  };
+  syncNewBookForm();
+
   $('createBookBtn').onclick = async () => {
     const meta = await api('/books', {
       method: 'POST',
@@ -1676,6 +2079,7 @@ function wire() {
         title: $('nb-title').value.trim() || 'Untitled', author: $('nb-author').value.trim(),
         genre: $('nb-genre').value.trim(), premise: $('nb-premise').value.trim(),
         pov: $('nb-pov').value, tense: $('nb-tense').value,
+        kind: newBookKind(), ageBand: $('nb-age').value,
       },
     });
     ['nb-title','nb-author','nb-genre','nb-premise'].forEach((i) => ($(i).value = ''));
@@ -1826,6 +2230,14 @@ function wire() {
   });
   $('saveBibleBtn').onclick = saveBible;
   $('foldMemoryBtn').onclick = foldEverything;
+  $('visualBibleBtn').onclick = buildVisualBible;
+
+  // picture books
+  $('ill-prompt-btn').onclick = writeArtPrompt;
+  $('ill-draw-btn').onclick = drawSpread;
+  $('ill-art').addEventListener('change', saveSpreadArt);
+  $('ill-prompt').addEventListener('change', saveSpreadArt);
+  $('illusPreview').onclick = (e) => { if (e.target.closest('[data-redraw]')) drawSpread(); };
 
   // notes
   $('notesPad').addEventListener('input', debounce(async () => {
