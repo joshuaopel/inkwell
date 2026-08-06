@@ -71,16 +71,25 @@ Built as a smarter, personal alternative to Sudowrite. The difference is the
   writing prompt carries a real word budget (12 words for a board book, 45 for a picture
   book, 90 for an early reader) so the model can't bury it under a page of novel. The words
   and the pictures are explicitly told to carry different halves.
-- **A locked visual bible, and pictures drawn locally** — one style line for the whole book,
-  a fixed palette, and per character a physical description of the one unmistakable thing
-  they always have. Every image prompt copies that description in verbatim and ends on the
-  same style line — which is the only reason your protagonist doesn't change shape between
-  pages. Your local model writes the prompt; an image generator **you already run** draws it:
-  **ComfyUI**, **AUTOMATIC1111 / SD.Next**, or **Ollama** (macOS only for image generation as
-  of early 2026). Bring your own ComfyUI workflow if you'd rather. Pictures are saved into the
-  book's own folder as ordinary PNGs and flow into Pages, print and EPUB. **No image backend
-  installed? Everything else still works** — you get the written prompts to take elsewhere,
-  or you draw the pictures yourself and drop them in.
+- **A locked visual bible** — one style line for the whole book, a fixed palette, and per
+  character a physical description of the one unmistakable thing they always have. Every image
+  prompt copies that description in verbatim and ends on the same style line — which is the
+  only reason your protagonist doesn't change shape between pages.
+- **Drawing built in — Inkwell installs the engine for you** — Settings › Illustration, turn it
+  on, pick how good you want the pictures, press **Set it up for me**, watch a progress bar.
+  No Python, no virtual environment, no CUDA toolkit, no second program to babysit: one native
+  binary ([stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp)) and one model
+  file, kept in an `engine/` folder beside your books and run by Inkwell itself. Three models to
+  choose from, each showing **its download size and its licence before you commit** — Sketch
+  (SD 1.5, 2.1 GB), Storybook (SDXL, 6.9 GB, the default) and Finest (FLUX.1-schnell, 10.3 GB,
+  Apache 2.0). Downloads resume if interrupted, cancel if you change your mind, and **Remove and
+  free the space** deletes the lot. The model stays loaded between pictures, so only the first
+  drawing of a session waits for it.
+- **…or keep the setup you already have** — same dropdown also takes **ComfyUI** (bring your own
+  API-format workflow if you like), **AUTOMATIC1111 / SD.Next**, or **Ollama** (macOS only for
+  image generation as of early 2026). Pictures are saved into the book's own folder as ordinary
+  PNGs and flow into Pages, print and EPUB. And you can always draw them yourself and drop them
+  in — the Art panel has taken your own files since day one.
 - **Works from your phone** — icon rail becomes a tab bar, panels become drawers, the
   outline map takes touch. Run it on your desktop and open it from anywhere on your
   network (see *Reading & writing from your phone* below).
@@ -133,12 +142,13 @@ ollama pull mistral-nemo
 Model names move — `ollama.com/library` has the current releases, and `ollama list`
 shows what you already have.
 
-**Optional, for drawing picture books:** an image generator running on your own machine —
-[ComfyUI](https://github.com/comfyanonymous/ComfyUI) (the usual choice on Windows with an
-NVIDIA card) or [AUTOMATIC1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui)
-started with `--api`. Inkwell doesn't install or bundle either one. Without one you can
-still plan, write and design a picture book — you just get the illustration prompts to
-take elsewhere, or you drop in your own artwork.
+**For drawing picture books:** nothing extra to install. Inkwell downloads its own drawing
+engine and model on request (Settings › Illustration) — budget 2–10 GB of disk depending on
+which model you pick, and a graphics card if you want a picture in seconds rather than
+minutes. Windows, Linux and Apple-silicon Macs are covered. If you already run
+[ComfyUI](https://github.com/comfyanonymous/ComfyUI) or
+[AUTOMATIC1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui), point Inkwell at
+that instead.
 
 ## Run
 
@@ -219,10 +229,17 @@ Inkwell/books/<book-id>/
   chapters/*.md  your actual prose
 ```
 
+Picture books use the same layout — a spread is stored as a chapter, so the folder is
+identical and a book can be read either way. `book.json` gains `kind` and `ageBand`,
+`bible.json` gains the visual style, palette and refrain, and each chapter gains what
+its picture shows and the prompt last used to draw it.
+
 Books created before the outline-map rewrite still open fine — they inherit the
 default four acts and auto-arrange on first view.
 
-Back this folder up and you've backed up everything.
+Back this folder up and you've backed up everything. The one thing not worth backing up
+is `engine/` — that's the downloaded drawing engine and its model, and Inkwell will
+fetch them again on request. It's gitignored for the same reason.
 
 ## Cloud models (optional, and deliberately second)
 
@@ -271,11 +288,13 @@ folder (not in browser storage, so it survives cache clears):
   needs a browser that can transcribe on-device (Chrome or Edge today); reading aloud works
   everywhere. Inkwell will tell you which you've got.
 
-- **Illustration** — for picture books. Which image backend (ComfyUI, AUTOMATIC1111 /
-  SD.Next, or Ollama), its address, the checkpoint, picture size, step count, a global
-  "always avoid" list, and optionally your own ComfyUI workflow in API format. **Test
-  connection** tells you whether it answered and lists the checkpoints it found. Off by
-  default — nothing tries to reach an image generator unless you turn this on.
+- **Illustration** — for picture books. Off by default; nothing is downloaded and nothing
+  tries to reach an image generator until you turn it on. The default engine is the one
+  Inkwell installs itself — pick a model tier and press **Set it up for me**. Or switch the
+  dropdown to ComfyUI, AUTOMATIC1111 / SD.Next or Ollama and give it an address, a checkpoint
+  and optionally your own ComfyUI workflow in API format. Plus picture shape, detail (steps —
+  leave it on *automatic* and the built-in engine uses what its model was built for), and a
+  global "always avoid" list. **Test connection** says whether it answered.
 
 Page design is per-book rather than global, and lives in the Pages tab.
 
