@@ -13,6 +13,7 @@ import { buildEpub } from './lib/epub.js';
 import { catalog, presetDesign, normalizeDesign, findTrim, findFont, ENUMS } from './lib/design.js';
 import { kindList, kindOf, isPicture, targets } from './lib/kinds.js';
 import { IMAGE_BACKENDS, IMAGE_SIZES, sizeById, imagesConfigured, imageProvider } from './lib/imagegen.js';
+import * as engine from './lib/engine.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -274,6 +275,47 @@ app.get('/api/image/health', asyncH(async (_req, res) => {
   res.json({ enabled: true, backend: settings.image.backend, host: p.base, ...h, models: h.ok ? await p.models() : [] });
 }));
 
+// ---- The drawing engine Inkwell installs for you ----
+app.get('/api/image/engine', asyncH(async (_req, res) => res.json(await engine.status())));
+
+// Downloading gigabytes with no sign of life is indistinguishable from a hang,
+// so the install streams its progress as NDJSON while it works.
+app.post('/api/image/engine/install', asyncH(async (req, res) => {
+  const { tier, accel } = req.body || {};
+  res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.flushHeaders?.();
+
+  // Closing the tab shouldn't leave a download running forever. This has to
+  // hang off the RESPONSE: the request's own 'close' fires the moment its body
+  // has been read, which is immediately, and would cancel every install.
+  const ctl = new AbortController();
+  res.on('close', () => { if (!res.writableEnded) ctl.abort(); });
+  const send = (o) => { if (!res.writableEnded) res.write(JSON.stringify(o) + '\n'); };
+
+  try {
+    const st = await engine.install({ tier, accel, signal: ctl.signal, onProgress: send });
+    send({ stage: 'installed', status: st });
+  } catch (e) {
+    send({ stage: 'error', error: ctl.signal.aborted ? 'Cancelled.' : String(e.message || e) });
+  }
+  res.end();
+}));
+
+// Loading the model takes a while the first time; this lets the UI ask for it
+// up front rather than making the first drawing look broken.
+app.post('/api/image/engine/start', asyncH(async (_req, res) => {
+  await engine.start();
+  res.json(await engine.status());
+}));
+
+app.post('/api/image/engine/stop', asyncH(async (_req, res) => {
+  await engine.stop();
+  res.json(await engine.status());
+}));
+
+app.delete('/api/image/engine', asyncH(async (_req, res) => res.json(await engine.remove())));
+
 // Plan a picture book as spreads: the words on each page, and a note on what
 // the picture shows. Kept separate from the novel outline because the shape,
 // the length and the craft are all different.
@@ -332,7 +374,10 @@ app.post('/api/books/:id/illustrate', asyncH(async (req, res) => {
     prompt: String(prompt).slice(0, 2000),
     negative: [settings.image.negative, negative].filter(Boolean).join(', '),
     width: size.w, height: size.h,
-    steps: Math.min(80, Math.max(1, +settings.image.steps || 28)),
+    // Zero means "whatever this model wants" — the built-in engine knows the
+    // right step count for the model it installed, and guessing on its behalf
+    // would ruin a four-step model by giving it twenty-eight.
+    steps: Math.min(80, Math.max(0, +settings.image.steps || 0)),
     seed: Number.isFinite(+seed) ? +seed : -1,
     model: settings.image.model,
     workflow: settings.image.workflow ? parseJsonLoose(settings.image.workflow) : null,
@@ -340,7 +385,7 @@ app.post('/api/books/:id/illustrate', asyncH(async (req, res) => {
 
   const asset = await store.addAsset(req.params.id, {
     name: name || 'illustration', kind: 'image', mime: img.mime || 'image/png',
-    buffer: img.buffer, w: size.w, h: size.h,
+    buffer: img.buffer, w: img.width || size.w, h: img.height || size.h,
   });
   res.json({ asset, seed: img.seed });
 }));

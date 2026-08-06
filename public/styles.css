@@ -746,6 +746,40 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--v
   border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
 }
 
+
+/* ---------- the drawing engine Inkwell installs ---------- */
+.runcard-badge.quiet { background: transparent; border-color: var(--line); color: var(--ink-faint); }
+
+.tierpick { display: grid; gap: 8px; }
+.tiercard {
+  display: flex; flex-direction: column; gap: 5px; text-align: left; width: 100%;
+  padding: 11px 13px; border-radius: 9px; cursor: pointer; font: inherit;
+  background: var(--panel-2); border: 1px solid var(--line); color: var(--ink-dim);
+  transition: border-color .14s, background .14s;
+}
+.tiercard:hover { border-color: var(--ink-faint); }
+.tiercard.on { border-color: var(--gold); background: rgba(210,173,99,.07); }
+.tc-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.tc-top b { color: var(--ink); font-size: 13px; }
+.tc-size { font-size: 11.5px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.tc-hint { font-size: 11.5px; line-height: 1.45; }
+.tc-lic { font-size: 10.5px; color: var(--ink-faint); }
+
+/* Download progress. A multi-gigabyte download with no visible movement is
+   indistinguishable from a crash, so this is not decoration. */
+.dlbar { margin-top: 12px; }
+.dl-note { font-size: 12px; color: var(--ink-dim); margin-bottom: 7px; }
+.dl-track { height: 7px; border-radius: 4px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
+.dl-fill {
+  height: 100%; width: 0; border-radius: 3px;
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold));
+  transition: width .25s ease-out;
+}
+.dl-meta {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  margin-top: 7px; font-size: 11.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 480px) {
   .cardgrid { grid-template-columns: 1fr; }
   .stats, .exportstats { grid-template-columns: 1fr 1fr; }

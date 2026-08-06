@@ -531,33 +531,68 @@
 
       <section class="setsec">
         <h3>Illustration</h3>
-        <p class="sethint">For picture books. Inkwell writes the prompt with your local model, then sends it to an image generator running on your own machine — ComfyUI or AUTOMATIC1111. Nothing leaves the house, and the pictures are saved inside the book's own folder.</p>
+        <p class="sethint">For picture books. Your local model writes the prompt; a drawing engine on this machine renders it. Inkwell can install that engine for you — one button, no Python, no separate program — and the pictures are saved inside the book&rsquo;s own folder.</p>
 
-        <label class="setcheck"><input type="checkbox" id="set-image-enabled"> Draw illustrations with a local image generator</label>
+        <label class="setcheck"><input type="checkbox" id="set-image-enabled"> Draw illustrations on this machine</label>
 
-        <div class="runcard secondary" id="imageBox" hidden>
-          <label class="setrow">Backend
+        <div id="imageBox" hidden>
+          <label class="setrow">Drawing engine
             <select id="set-image-backend"></select>
           </label>
           <div class="cloudhint" id="imageHint"></div>
-          <label class="setrow">Address
-            <input type="text" id="set-image-base" placeholder="http://127.0.0.1:8188" />
-          </label>
-          <label class="setrow">Checkpoint / model
-            <select id="set-image-model"><option value="">— not connected —</option></select>
-          </label>
-          <label class="setrow">Picture size
+
+          <!-- ===== the engine Inkwell installs ===== -->
+          <div class="runcard primary" id="engineBox" hidden>
+            <div class="runcard-head">
+              <span class="runcard-title">Inkwell&rsquo;s own drawing engine</span>
+              <span class="runcard-badge" id="engineBadge">not installed</span>
+            </div>
+            <div class="conn" id="engineInfo"></div>
+
+            <div id="enginePick">
+              <p class="sethint" style="margin:12px 0 8px">Pick how good the pictures should be. You can change this later — it only changes which model is downloaded.</p>
+              <div class="tierpick" id="engineTiers"></div>
+              <div class="setrow" style="margin-top:12px">
+                <button class="btn primary sm" id="engineInstall">Set it up for me</button>
+                <span class="submeta" id="engineNote"></span>
+              </div>
+            </div>
+
+            <div class="dlbar" id="engineProgress" hidden>
+              <div class="dl-note" id="dlNote">Starting…</div>
+              <div class="dl-track"><div class="dl-fill" id="dlFill"></div></div>
+              <div class="dl-meta"><span id="dlBytes"></span><button class="linkbtn" id="engineCancel">Cancel</button></div>
+            </div>
+
+            <div class="setrow" id="engineReadyRow" hidden>
+              <button class="btn ghost sm" id="engineWarm">Load it now</button>
+              <button class="linkbtn" id="engineChange">Use a different model</button>
+              <button class="linkbtn" id="engineRemove">Remove and free the space</button>
+            </div>
+          </div>
+
+          <!-- ===== somebody else's engine ===== -->
+          <div class="runcard secondary" id="externalBox" hidden>
+            <label class="setrow">Address
+              <input type="text" id="set-image-base" placeholder="http://127.0.0.1:8188" />
+            </label>
+            <label class="setrow">Checkpoint / model
+              <select id="set-image-model"><option value="">&mdash; not connected &mdash;</option></select>
+            </label>
+            <details class="setdetails">
+              <summary>Use my own ComfyUI workflow</summary>
+              <p class="sethint">Paste a workflow exported in <em>API format</em>. Inkwell substitutes <code>{{prompt}}</code>, <code>{{negative}}</code>, <code>{{seed}}</code>, <code>{{steps}}</code>, <code>{{width}}</code> and <code>{{height}}</code> wherever you put them. Leave empty to use the built-in one.</p>
+              <textarea id="set-image-workflow" rows="4" placeholder='{"3": {"class_type": "KSampler", &hellip;}}'></textarea>
+            </details>
+          </div>
+
+          <label class="setrow">Picture shape
             <select id="set-image-size"></select>
           </label>
-          <div class="setrow slider"><span>Steps</span><input type="range" id="set-image-steps" min="8" max="60" step="1"><output id="out-image-steps"></output></div>
+          <div class="setrow slider"><span>Detail <em>(steps)</em></span><input type="range" id="set-image-steps" min="0" max="60" step="1"><output id="out-image-steps"></output></div>
           <label class="setrow">Always avoid
             <input type="text" id="set-image-negative" placeholder="text, watermark, extra fingers" />
           </label>
-          <details class="setdetails">
-            <summary>Use my own ComfyUI workflow</summary>
-            <p class="sethint">Paste a workflow exported in <em>API format</em>. Inkwell substitutes <code>{{prompt}}</code>, <code>{{negative}}</code>, <code>{{seed}}</code>, <code>{{steps}}</code>, <code>{{width}}</code> and <code>{{height}}</code> wherever you put them. Leave empty to use the built-in one.</p>
-            <textarea id="set-image-workflow" rows="4" placeholder='{"3": {"class_type": "KSampler", …}}'></textarea>
-          </details>
           <div class="setrow">
             <button class="btn ghost sm" id="set-image-test">Test connection</button>
             <span class="submeta" id="imageStatus"></span>

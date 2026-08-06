@@ -7,6 +7,10 @@ books/
 # personal, machine-specific runtime config (the app regenerates it)
 settings.json
 
+# the drawing engine and its model — gigabytes of downloaded binaries, and
+# Inkwell fetches them again on demand
+engine/
+
 # local working files (audio, scratch images) — not part of the app
 Video/
 promo/Capture.PNG

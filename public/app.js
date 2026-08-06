@@ -271,17 +271,15 @@ async function renderImageSettings() {
 
   const bsel = $('set-image-backend');
   bsel.innerHTML = backends.map((b) => `<option value="${esc(b.id)}">${esc(b.label)}</option>`).join('');
-  bsel.value = i.backend || 'comfyui';
+  bsel.value = i.backend || 'bundled';
 
-  const ssel = $('set-image-size');
-  ssel.innerHTML = sizes.map((s) => `<option value="${esc(s.id)}">${esc(s.label)}</option>`).join('');
-  ssel.value = i.size || 'square';
+  renderSizeOptions(sizes, i.size || 'square');
 
   $('set-image-enabled').checked = !!i.enabled;
   $('imageBox').hidden = !i.enabled;
   $('set-image-base').value = i.baseUrl || '';
-  $('set-image-steps').value = i.steps ?? 28;
-  $('out-image-steps').textContent = i.steps ?? 28;
+  $('set-image-steps').value = i.steps ?? 0;
+  $('out-image-steps').textContent = stepLabel(i.steps ?? 0);
   $('set-image-negative').value = i.negative || '';
   $('set-image-workflow').value = i.workflow || '';
   imageBackendHint();
@@ -293,13 +291,160 @@ async function renderImageSettings() {
     ? `<option value="${esc(i.model)}">${esc(i.model)}</option>`
     : '<option value="">— test the connection to list models —</option>';
   msel.value = i.model || '';
+
+  if (i.enabled) renderEngine();
 }
+
+// The built-in engine draws at whatever resolution its model was trained for and
+// scales the shape you asked for onto it, so quoting exact pixels here would be
+// a promise it doesn't keep. Other backends render exactly what they're told.
+function renderSizeOptions(sizes, chosen) {
+  const builtIn = $('set-image-backend').value === 'bundled';
+  const ssel = $('set-image-size');
+  ssel.innerHTML = sizes.map((s) => {
+    const label = builtIn ? s.label.split('·')[0].trim() : s.label;
+    return `<option value="${esc(s.id)}">${esc(label)}</option>`;
+  }).join('');
+  ssel.value = chosen;
+}
+
+// Zero doesn't mean "no detail", it means "whatever this model was built for" —
+// which is the only sane default when Inkwell chose the model.
+const stepLabel = (n) => (+n ? String(n) : 'automatic');
 
 async function imageBackendHint() {
   const { backends } = await imageCatalog();
-  const b = backends.find((x) => x.id === $('set-image-backend').value);
+  const id = $('set-image-backend').value;
+  const b = backends.find((x) => x.id === id);
   $('imageHint').textContent = b?.hint || '';
   $('set-image-base').placeholder = b?.defaultBaseUrl || '';
+  // The built-in engine has no address and no checkpoint to choose; the others
+  // have nothing to install.
+  $('engineBox').hidden = !b?.builtIn;
+  $('externalBox').hidden = !!b?.builtIn;
+  renderSizeOptions((await imageCatalog()).sizes, $('set-image-size').value || 'square');
+  if (b?.builtIn) renderEngine();
+}
+
+// ---------- the engine Inkwell installs ----------
+const GB = (n) => (n / 1e9).toFixed(1) + ' GB';
+
+async function renderEngine({ refresh = true } = {}) {
+  if (refresh) {
+    try { state.engine = await api('/image/engine'); } catch { return; }
+  }
+  const e = state.engine;
+  if (!e) return;
+
+  const badge = $('engineBadge');
+  badge.textContent = !e.supported ? 'not available here'
+    : e.running ? 'loaded and ready'
+    : e.ready ? 'installed'
+    : e.binary ? 'unfinished download'
+    : 'not installed';
+  badge.className = 'runcard-badge' + (e.ready ? '' : ' quiet');
+
+  // Say what the machine actually turned out to have. The Vulkan build runs on
+  // a machine with no graphics card by quietly falling back to the processor,
+  // and the difference between those two is seconds versus ten minutes — so it
+  // is not something to find out by waiting.
+  const hardware = e.deviceLabel
+    ? (e.usingGpu
+      ? `Drawing on <b>${esc(e.deviceLabel)}</b>`
+      : `<span class="bad">● no graphics card found</span> — drawing on <b>${esc(e.deviceLabel)}</b>.
+         <span class="submeta">It works, but expect several minutes a picture. The Sketch model is much quicker here.</span>`)
+    : `Running on <b>${esc(e.accelLabel || 'this machine')}</b>`;
+
+  $('engineInfo').innerHTML = !e.supported
+    ? `<span class="bad">● no build for ${esc(e.platform)}</span><br><span class="submeta">Use ComfyUI on this machine instead.</span>`
+    : e.ready
+      ? `Model <b>${esc(e.tierLabel)}</b><br>${hardware}<br>
+         Using <b>${GB(e.bytes)}</b> in <code>${esc(e.dir)}</code>
+         ${e.running ? '<br><span class="ok">● loaded — the next picture starts straight away</span>'
+                     : '<br><span class="submeta">It loads the model the first time you draw.</span>'}`
+      : e.binary
+        ? `<span class="bad">● the model download didn't finish</span><br><span class="submeta">Press the button again — it picks up where it stopped.</span>`
+        : `<span class="submeta">Nothing has been downloaded yet. Inkwell will fetch a small drawing engine and one model, and keep them in <code>${esc(e.dir)}</code>.</span>`;
+
+  // Tier cards
+  const chosen = state.engineTier || e.tier || 'storybook';
+  $('engineTiers').innerHTML = (e.tiers || []).map((t) => `
+    <button type="button" class="tiercard ${t.id === chosen ? 'on' : ''}" data-tier="${esc(t.id)}">
+      <span class="tc-top"><b>${esc(t.label)}</b><span class="tc-size">${GB(t.bytes)}</span></span>
+      <span class="tc-hint">${esc(t.hint)}</span>
+      <span class="tc-lic">Licence: ${esc(t.licence)}</span>
+    </button>`).join('');
+
+  const busy = !!state.engineInstalling;
+  // Once a model is installed the picker folds away — but "Use a different
+  // model" has to bring it back, or the first choice is the only choice you
+  // ever get to make.
+  $('enginePick').hidden = busy || (e.ready && e.tier === chosen && !state.enginePicking);
+  $('engineReadyRow').hidden = busy || !e.ready;
+  $('engineProgress').hidden = !busy;
+  $('engineWarm').hidden = e.running;
+  $('engineInstall').disabled = !e.supported;
+  $('engineInstall').textContent = e.binary && !e.modelsReady ? 'Resume the download'
+    : e.ready ? `Switch to ${esc((e.tiers.find((t) => t.id === chosen) || {}).label || 'this')}`
+    : 'Set it up for me';
+
+  // Always state the size when a download is actually on the table — including
+  // when you're switching models, which is exactly when it matters most.
+  const t = (e.tiers || []).find((x) => x.id === chosen);
+  const willDownload = t && (!e.ready || e.tier !== chosen);
+  $('engineNote').textContent = willDownload ? `About ${GB(t.bytes)} to download, once.` : '';
+}
+
+// The install streams NDJSON progress; without it a multi-gigabyte download is
+// indistinguishable from a hang.
+async function installEngine() {
+  const tier = state.engineTier || state.engine?.tier || 'storybook';
+  state.engineInstalling = new AbortController();
+  await renderEngine({ refresh: false });
+  $('dlNote').textContent = 'Starting…';
+  $('dlFill').style.width = '0%';
+  $('dlBytes').textContent = '';
+
+  try {
+    const r = await fetch('/api/image/engine/install', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier }), signal: state.engineInstalling.signal,
+    });
+    if (!r.ok) throw new Error('The server refused to start the download.');
+
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const p = JSON.parse(line);
+        if (p.stage === 'error') throw new Error(p.error);
+        if (p.note) $('dlNote').textContent = p.note;
+        if (p.total) {
+          const pct = Math.min(100, (p.got / p.total) * 100);
+          $('dlFill').style.width = pct.toFixed(1) + '%';
+          $('dlBytes').textContent = `${GB(p.got)} of ${GB(p.total)} · ${pct.toFixed(0)}%`;
+        } else {
+          $('dlBytes').textContent = '';
+        }
+        if (p.stage === 'installed') state.engine = p.status;
+      }
+    }
+    state.engineTier = tier;
+    state.enginePicking = false;
+    toast('The drawing engine is ready.', 'ok');
+  } catch (e) {
+    if (e.name !== 'AbortError') toast(e.message, 'err');
+  } finally {
+    state.engineInstalling = null;
+    await renderEngine();
+  }
 }
 
 async function testImageBackend() {
@@ -311,8 +456,16 @@ async function testImageBackend() {
     state.settings = await api('/settings', { method: 'PUT', body: collectSettings() });
     const h = await api('/image/health');
     if (!h.enabled) return (status.innerHTML = '<span class="bad">● turned off</span>');
-    if (!h.ok) return (status.innerHTML = `<span class="bad">● ${esc(h.reason || 'no answer')}</span>`);
+    if (!h.ok) {
+      status.innerHTML = `<span class="bad">● ${esc(h.reason || 'no answer')}</span>`;
+      if (h.needsInstall) renderEngine();
+      return;
+    }
 
+    if ($('set-image-backend').value === 'bundled') {
+      status.innerHTML = `<span class="ok">● ready</span> — ${esc(h.models[0] || 'installed')}`;
+      return renderEngine();
+    }
     const msel = $('set-image-model');
     const keep = state.settings.image.model;
     msel.innerHTML = h.models.length
@@ -2017,10 +2170,47 @@ function wire() {
     $('set-cloud-base').placeholder = svc?.defaultBaseUrl || '';
     if (!$('set-cloud-base').value.trim()) $('set-cloud-base').value = '';
   });
-  $('set-image-enabled').addEventListener('change', (e) => { $('imageBox').hidden = !e.target.checked; });
-  $('set-image-backend').addEventListener('change', () => { $('set-image-base').value = ''; imageBackendHint(); });
-  $('set-image-steps').addEventListener('input', (e) => ($('out-image-steps').textContent = e.target.value));
+  $('set-image-enabled').addEventListener('change', (e) => {
+    $('imageBox').hidden = !e.target.checked;
+    if (e.target.checked) imageBackendHint();
+  });
+  $('set-image-backend').addEventListener('change', () => {
+    // A step count that suited one engine's model rarely suits another's — a
+    // distilled model wants four where a normal one wants twenty-eight. Reset
+    // to automatic on a switch, same as the address.
+    $('set-image-base').value = '';
+    $('set-image-steps').value = 0;
+    $('out-image-steps').textContent = stepLabel(0);
+    imageBackendHint();
+  });
+  $('set-image-steps').addEventListener('input', (e) => ($('out-image-steps').textContent = stepLabel(e.target.value)));
   $('set-image-test').onclick = testImageBackend;
+
+  // the built-in engine
+  $('engineTiers').onclick = (e) => {
+    const card = e.target.closest('[data-tier]');
+    if (!card || state.engineInstalling) return;
+    state.engineTier = card.dataset.tier;
+    renderEngine({ refresh: false });
+  };
+  $('engineInstall').onclick = installEngine;
+  $('engineChange').onclick = () => { state.enginePicking = true; renderEngine({ refresh: false }); };
+  $('engineCancel').onclick = () => state.engineInstalling?.abort();
+  $('engineWarm').onclick = async () => {
+    const b = $('engineWarm');
+    b.disabled = true; b.innerHTML = '<span class="spin"></span> Loading the model…';
+    try { state.engine = await api('/image/engine/start', { method: 'POST' }); toast('Loaded and ready.', 'ok'); }
+    catch (e) { toast(e.message, 'err'); }
+    finally { b.disabled = false; b.textContent = 'Load it now'; renderEngine(); }
+  };
+  $('engineRemove').onclick = async () => {
+    if (!confirm(`Delete the drawing engine and its model?\n\nThat frees ${GB(state.engine?.bytes || 0)}. Your books and any pictures already drawn are untouched.`)) return;
+    state.engine = await api('/image/engine', { method: 'DELETE' });
+    state.engineTier = null;
+    state.enginePicking = false;
+    renderEngine({ refresh: false });
+    toast('Removed.', 'ok');
+  };
   $('settingsModal').onclick = (e) => { if (e.target.id === 'settingsModal') $('settingsModal').hidden = true; };
   // live-preview every slider as it moves
   for (const [input, output, group, key, fmt] of SET_FIELDS) {

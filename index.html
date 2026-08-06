@@ -1303,42 +1303,53 @@ footer p { margin: 0 0 8px; }
       <h3>Where the pictures come from</h3>
 
       <p class="col">
-        Same principle as the text: your machine, your model, no account. Inkwell writes the prompt
-        with your local language model, then hands it to an image generator you already run.
+        Same principle as the text: your machine, your model, no account. The difference is that you
+        don't have to go and find the drawing engine — <strong>Inkwell installs it</strong>.
+        Settings &rsaquo; Illustration, turn it on, pick how good you want the pictures to be, press
+        <em>Set it up for me</em>, and watch a progress bar. No Python, no virtual environment, no
+        CUDA toolkit, no second program to keep running. One native binary and one model file, kept
+        in an <code>engine</code> folder beside your books, started and stopped by Inkwell itself.
       </p>
 
       <div class="cards three">
         <div class="card">
-          <h5>ComfyUI</h5>
-          <p>The usual choice on Windows with an NVIDIA card. Point Inkwell at
-          <code>127.0.0.1:8188</code>, pick a checkpoint, done. Prefer your own graph? Paste an
-          API-format workflow with <code>{{prompt}}</code> in it and Inkwell will use that instead.</p>
+          <h5>Sketch &middot; 2.1 GB</h5>
+          <p>Stable Diffusion 1.5. Quick, small, and the only realistic option on a laptop with no
+          graphics card. Good for roughing a spread out.</p>
         </div>
         <div class="card">
-          <h5>AUTOMATIC1111 / SD.Next</h5>
-          <p>Start it with <code>--api</code> and point Inkwell at <code>127.0.0.1:7860</code>.
-          One request, one picture back.</p>
+          <h5>Storybook &middot; 6.9 GB</h5>
+          <p>Stable Diffusion XL. The sensible default — far better at illustration, still a single
+          file, still fits on a mid-range card.</p>
         </div>
         <div class="card">
-          <h5>Ollama</h5>
-          <p>Ollama gained image generation in January 2026, but macOS only for now. The slot is
-          there and works on a Mac; on Windows and Linux use ComfyUI until it lands.</p>
+          <h5>Finest &middot; 10.3 GB</h5>
+          <p>FLUX.1-schnell, quantised. The best pictures, four steps each, and a plain Apache
+          licence — but a big download and hungry for memory.</p>
         </div>
-      </div>
-
-      <div class="note-box">
-        <p><b>Inkwell does not install any of this for you, and can't draw without it.</b> Image
-        generation is a separate program with its own multi-gigabyte model files. If you haven't got
-        one running, everything else in a picture book still works — the interview, the page plan,
-        the words, the visual bible, the written prompts — you just take those prompts elsewhere, or
-        draw the pictures yourself and drop them in. The Art panel has always accepted your own
-        files, and a scanned crayon drawing is a perfectly good illustration.</p>
       </div>
 
       <p class="col">
-        Drawn pictures are saved into the book's own folder, beside the words, as ordinary PNGs.
-        They flow into the Pages view at the real trim, print to PDF, and export into the EPUB.
-        Nothing about an illustrated book is trapped anywhere.
+        Each one tells you its size and its licence <em>before</em> you commit, because a licence
+        matters if you intend to sell the book. The download resumes if it's interrupted, cancels if
+        you change your mind, and <strong>Remove and free the space</strong> deletes the lot. Once
+        it's installed the model stays loaded between pictures, so only the first drawing of a
+        session waits for it.
+      </p>
+
+      <div class="note-box">
+        <p><b>Already run ComfyUI or AUTOMATIC1111?</b> Keep using it — pick it from the same
+        dropdown and give Inkwell the address. ComfyUI can take your own API-format workflow with
+        <code>{{prompt}}</code> in it. There's an Ollama slot too, ready for the day its image
+        generation reaches Windows and Linux; it works on a Mac now. And if you'd rather draw the
+        pictures yourself, the Art panel has always accepted your own files — a scanned crayon
+        drawing is a perfectly good illustration.</p>
+      </div>
+
+      <p class="col">
+        However they're made, pictures are saved into the book's own folder, beside the words, as
+        ordinary PNGs. They flow into the Pages view at the real trim, print to PDF, and export into
+        the EPUB. Nothing about an illustrated book is trapped anywhere.
       </p>
     </section>
 
