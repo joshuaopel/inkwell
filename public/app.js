@@ -77,7 +77,10 @@ const ACT_COLORS = ['violet', 'teal', 'green', 'gold'];
 const state = {
   model: localStorage.getItem('inkwell.model') || '',
   books: [], book: null, chapterId: null,
-  view: 'home', mapMode: 'map',
+  view: 'home',
+  // A draggable node graph needs room. On a phone the list — titles, summaries
+  // and beats, stacked — is the better read, so that's what you land on.
+  mapMode: window.matchMedia('(max-width: 860px)').matches ? 'list' : 'map',
   revision: null, lastSuggestion: null, refine: null,
   settings: null, models: [],
 };
@@ -624,9 +627,13 @@ function renderOutline() {
 
   if (!chs.length) { $('actBar').innerHTML = ''; $('stats').innerHTML = ''; return; }
 
-  // act bar
+  // Keep the Map/List buttons honest about which view you're actually on.
+  els('#mapSeg button').forEach((b) => b.classList.toggle('on', b.dataset.map === state.mapMode));
+
+  // act bar — the column count goes through a custom property so narrow screens
+  // can override it in CSS instead of fighting an inline style.
   const bar = $('actBar');
-  bar.style.gridTemplateColumns = `repeat(${acts().length}, 1fr)`;
+  bar.style.setProperty('--acts', acts().length);
   bar.innerHTML = acts().map((a, i) => `<div class="act" data-c="${ACT_COLORS[i % 4]}">
       <div class="an">Act ${['I','II','III','IV','V','VI'][i] || i + 1}</div>
       <div class="at">${esc(a.subtitle || a.title || '')}</div>
@@ -641,9 +648,16 @@ function renderMap() {
   const chs = chapters();
   const maxX = Math.max(...chs.map((c) => c.x)) + CARD_W;
   const maxY = Math.max(...chs.map((c) => c.y)) + CARD_H;
+  // Size the CONTENT, not the viewport. Setting .mapwrap's own width to the
+  // map's width leaves it nothing to scroll, so on any screen narrower than the
+  // map the far chapters simply fall off the edge, unreachable.
   const wrap = $('mapWrap');
-  wrap.style.height = maxY + 20 + 'px';
-  wrap.style.width = maxX + 20 + 'px';
+  const w = maxX + 20, h = maxY + 20;
+  wrap.style.width = '';
+  wrap.style.height = h + 'px';
+  const nodes = $('nodes');
+  nodes.style.width = w + 'px';
+  nodes.style.height = h + 'px';
 
   $('nodes').innerHTML = chs.map((c, i) => {
     const w = wc(c.content);

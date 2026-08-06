@@ -217,7 +217,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--v
 .syncbar .st b { color: #f0dca8; font-weight: 600; }
 
 /* ---------- act bar ---------- */
-.actbar { display: grid; gap: 14px; margin-bottom: 22px; }
+.actbar { display: grid; gap: 14px; margin-bottom: 22px; grid-template-columns: repeat(var(--acts, 4), 1fr); }
 .act .an { font-size: 11px; color: var(--ink-dim); font-weight: 600; }
 .act .at { font-size: 13px; color: var(--ink); margin: 2px 0 8px; font-family: var(--serif); }
 .act .ab { height: 3px; border-radius: 3px; background: var(--line); }
@@ -227,7 +227,13 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--v
 .act[data-c="gold"]   .ab { background: var(--amber); }
 
 /* ---------- map view ---------- */
-.mapwrap { position: relative; min-height: 300px; margin-bottom: 26px; }
+/* The map scrolls inside itself rather than pushing the page sideways.
+   `overscroll-behavior-x` stops a sideways swipe turning into a browser
+   back-navigation on Android. */
+.mapwrap {
+  position: relative; min-height: 300px; margin-bottom: 26px;
+  overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
+}
 .wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .wires path { fill: none; stroke: #39405a; stroke-width: 1.4; }
 .wires path.soft { stroke: #2e3448; stroke-dasharray: 4 5; }
@@ -689,8 +695,8 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--v
   .modal-foot { padding-bottom: calc(14px + env(safe-area-inset-bottom)); flex-wrap: wrap; }
   .setrow.slider > span { flex: 0 0 128px; }
 
-  /* the outline map scrolls instead of squeezing */
-  .mapwrap { overflow-x: auto; }
+  /* Four acts across a phone leaves a word per column; two rows reads. */
+  .actbar { grid-template-columns: repeat(2, 1fr); gap: 10px 14px; }
   .node { touch-action: none; }
 }
 
