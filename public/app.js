@@ -54,7 +54,18 @@ function friendlyError(err) {
   if (/ECONNREFUSED|11434|not reachable|ollama/i.test(msg)) {
     return { kind: 'ollama', html: `Ollama isn't responding. Start it, then click Retry.` };
   }
-  return { kind: 'generic', html: esc(msg || 'Something went wrong.') };
+  // The drawing engine hands back its own console output when it fails. That's
+  // the only thing that says WHY, so show it rather than flattening it into one
+  // unreadable line.
+  const [head, log] = msg.split(/\n*--- the engine's own words ---\n*/);
+  if (log) {
+    return {
+      kind: 'engine',
+      html: `${esc(head.trim()).replace(/\n/g, '<br>')}
+        <details class="enginelog"><summary>What the engine said</summary><pre>${esc(log.trim())}</pre></details>`,
+    };
+  }
+  return { kind: 'generic', html: esc(msg || 'Something went wrong.').replace(/\n/g, '<br>') };
 }
 
 function showPlanError(elId, err, onRetry) {
@@ -355,6 +366,13 @@ async function renderEngine({ refresh = true } = {}) {
          <span class="submeta">It works, but expect several minutes a picture. The Sketch model is much quicker here.</span>`)
     : `Running on <b>${esc(e.accelLabel || 'this machine')}</b>`;
 
+  // If the engine died last time, say so here rather than making the author
+  // discover it again by waiting through another failed picture.
+  const crashed = e.lastExit && !e.running
+    ? `<div class="enginecrash">The engine stopped on its own last time (exit ${esc(String(e.lastExit.code))}).
+         <details class="enginelog"><summary>What it said</summary><pre>${esc((e.lastExit.log || '').trim())}</pre></details></div>`
+    : '';
+
   $('engineInfo').innerHTML = !e.supported
     ? `<span class="bad">● no build for ${esc(e.platform)}</span><br><span class="submeta">Use ComfyUI on this machine instead.</span>`
     : e.ready
@@ -365,6 +383,7 @@ async function renderEngine({ refresh = true } = {}) {
       : e.binary
         ? `<span class="bad">● the model download didn't finish</span><br><span class="submeta">Press the button again — it picks up where it stopped.</span>`
         : `<span class="submeta">Nothing has been downloaded yet. Inkwell will fetch a small drawing engine and one model, and keep them in <code>${esc(e.dir)}</code>.</span>`;
+  $('engineInfo').innerHTML += crashed;
 
   // Tier cards
   const chosen = state.engineTier || e.tier || 'storybook';
@@ -1644,6 +1663,31 @@ async function saveSpreadArt() {
   });
 }
 
+// While a picture is being drawn nothing comes back until it's finished, so
+// poll the engine and report what it says it's doing. Without this a five-minute
+// drawing is indistinguishable from a hang — which is exactly what it looked
+// like the first time somebody ran it on a real machine.
+function watchEngine(btn) {
+  let stop = false;
+  const tick = async () => {
+    while (!stop) {
+      try {
+        const st = await api('/image/engine');
+        const a = st.activity;
+        if (!stop && a) {
+          const pct = a.total ? Math.round((a.done / a.total) * 100) : 0;
+          btn.innerHTML = a.phase === 'loading'
+            ? `<span class="spin"></span> Loading the model… ${pct}%`
+            : `<span class="spin"></span> Drawing… ${a.done}/${a.total} · ${esc(a.rate)}`;
+        }
+      } catch {}
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  };
+  tick();
+  return () => { stop = true; };
+}
+
 async function drawSpread() {
   const ch = currentChapter();
   const prompt = $('ill-prompt').value.trim();
@@ -1652,7 +1696,9 @@ async function drawSpread() {
 
   const btn = $('ill-draw-btn');
   const original = btn.textContent;
-  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Drawing… this takes a minute';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Starting…';
+  const unwatch = watchEngine(btn);
   clearPlanError('illusErr');
   try {
     await saveSpreadArt();
@@ -1677,6 +1723,7 @@ async function drawSpread() {
   } catch (e) {
     showPlanError('illusErr', e, drawSpread);
   } finally {
+    unwatch();
     btn.disabled = false; btn.textContent = original;
   }
 }
