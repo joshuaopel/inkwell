@@ -1700,10 +1700,17 @@ async function drawSpread() {
   btn.innerHTML = '<span class="spin"></span> Starting…';
   const unwatch = watchEngine(btn);
   clearPlanError('illusErr');
+  // A picture on a machine without a graphics card can take an hour, and the
+  // engine has no way to interrupt one — so stopping means stopping the engine.
+  // That costs a model reload next time, which is a great deal better than
+  // being stuck watching it.
+  state.drawing = new AbortController();
+  $('ill-cancel-btn').hidden = false;
   try {
     await saveSpreadArt();
     const { asset } = await api(`/books/${state.book.meta.id}/illustrate`, {
       method: 'POST',
+      signal: state.drawing.signal,
       body: { prompt, negative: state.illNegative || '', name: ch.title },
     });
 
@@ -1721,10 +1728,27 @@ async function drawSpread() {
     if (state.view === 'pages') renderPages({ rebuild: true });
     toast('Drawn and placed on the spread.', 'ok');
   } catch (e) {
-    showPlanError('illusErr', e, drawSpread);
+    if (e.name !== 'AbortError') showPlanError('illusErr', e, drawSpread);
   } finally {
     unwatch();
+    state.drawing = null;
+    $('ill-cancel-btn').hidden = true;
     btn.disabled = false; btn.textContent = original;
+  }
+}
+
+async function stopDrawing() {
+  if (!state.drawing) return;
+  const b = $('ill-cancel-btn');
+  b.disabled = true; b.textContent = 'Stopping…';
+  try {
+    state.drawing.abort();
+    await api('/image/engine/stop', { method: 'POST' });
+    toast('Stopped. The next picture will load the model again.', 'ok');
+  } catch (e) {
+    toast(e.message, 'err');
+  } finally {
+    b.disabled = false; b.textContent = 'Stop drawing';
   }
 }
 
@@ -2472,6 +2496,7 @@ function wire() {
   // picture books
   $('ill-prompt-btn').onclick = writeArtPrompt;
   $('ill-draw-btn').onclick = drawSpread;
+  $('ill-cancel-btn').onclick = stopDrawing;
   $('ill-art').addEventListener('change', saveSpreadArt);
   $('ill-prompt').addEventListener('change', saveSpreadArt);
   $('illusPreview').onclick = (e) => { if (e.target.closest('[data-redraw]')) drawSpread(); };
