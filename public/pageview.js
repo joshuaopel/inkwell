@@ -197,6 +197,14 @@ async function applyAlphaShapes() {
 }
 
 function openerHtml(ch, index) {
+  // A spread's title is a working label for the author — "Two eyes", "The
+  // question" — and printing it as a chapter opener puts a title page in front
+  // of every picture, which is not what a picture book is. The header still
+  // gets emitted, silently, because it's also the marker that tells the slider
+  // and the rail which page each unit starts on.
+  if (book()?.meta?.kind === 'picture') {
+    return `<header class="pv-opener silent" data-ch="${esc(ch.id)}"></header>`;
+  }
   const o = design().opener;
   const num = chapterNumber(index);
   return `<header class="pv-opener" data-ch="${esc(ch.id)}">

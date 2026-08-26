@@ -124,6 +124,9 @@
   padding-top: var(--odrop); margin-bottom: 1.5em; text-align: center;
 }
 .pv-paper[data-newpage="off"] .pv-opener { break-before: auto; padding-top: 2em; }
+/* A picture book's opener is a page marker, not printed matter: it still starts
+   the spread on a fresh page, but takes no room and shows nothing. */
+.pv-opener.silent { padding: 0; margin: 0; height: 0; overflow: hidden; }
 .pv-paper[data-oalign="left"] .pv-opener { text-align: left; }
 .pv-onum {
   font-size: .78em; letter-spacing: .22em; text-transform: uppercase;
@@ -146,7 +149,12 @@
 .pv-art.side-left { float: left; margin: .15em var(--art-gap) var(--art-gap) 0; }
 .pv-art.side-right { float: right; margin: .15em 0 var(--art-gap) var(--art-gap); }
 .pv-art.side-center { float: none; margin: var(--art-gap) auto; }
-.pv-art.side-full { float: none; width: 100%; margin: var(--art-gap) 0; }
+/* "Full" means the prose runs above and below rather than beside it — not that
+   the picture must fill the column. Hard-coding 100% here made the Art panel's
+   width slider do nothing at all for these, which is the one place a picture
+   book needs it: a square image at 100% on a square page leaves no room for
+   the words, and pushes them to the next page. */
+.pv-art.side-full { float: none; width: var(--art-w); margin: var(--art-gap) auto; }
 .pv-art.side-bleed {
   float: none; width: calc(100% + var(--mi) + var(--mo));
   margin: var(--art-gap) calc(-1 * var(--mo)) var(--art-gap) calc(-1 * var(--mi));
@@ -292,6 +300,7 @@
   body.printing #pv-print p { margin: 0 0 var(--pspace); text-indent: var(--indent); text-align: justify; }
   body.printing #pv-print p.first { text-indent: 0; }
   body.printing #pv-print .pv-opener { break-before: page; text-align: center; padding-top: var(--odrop); margin-bottom: 1.5em; }
+  body.printing #pv-print .pv-opener.silent { padding: 0; margin: 0; height: 0; overflow: hidden; }
   body.printing #pv-print .pv-chapter:first-child .pv-opener { break-before: avoid; }
   body.printing #pv-print .pv-otitle { font-size: 1.65em; font-weight: 500; margin: .55em 0 0; }
   body.printing #pv-print .pv-onum, body.printing #pv-print .pv-orn { color: var(--accent); text-align: center; }
@@ -301,7 +310,8 @@
   body.printing #pv-print .pv-art.side-left { float: left; margin: .15em var(--art-gap) var(--art-gap) 0; }
   body.printing #pv-print .pv-art.side-right { float: right; margin: .15em 0 var(--art-gap) var(--art-gap); }
   body.printing #pv-print .pv-art.side-center { margin: var(--art-gap) auto; }
-  body.printing #pv-print .pv-art.side-full, body.printing #pv-print .pv-art.side-bleed { width: 100%; margin: var(--art-gap) 0; }
+  body.printing #pv-print .pv-art.side-full { width: var(--art-w); margin: var(--art-gap) auto; }
+  body.printing #pv-print .pv-art.side-bleed { width: 100%; margin: var(--art-gap) 0; }
   body.printing #pv-print figcaption { font-size: .7em; text-align: center; text-indent: 0; }
 }
 
