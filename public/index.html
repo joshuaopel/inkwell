@@ -37,7 +37,7 @@
     <!-- ========== TOP BAR ========== -->
     <header class="topbar">
       <button class="iconbtn mobonly" id="menuBtn" title="Books &amp; chapters" aria-label="Books and chapters">☰</button>
-      <div class="brand">Inkwell</div>
+      <div class="brand"><span class="brand-mark">I</span><span class="brand-name">Inkwell</span><span class="brand-tag">story studio</span></div>
       <input id="bookTitleInput" class="booktitle" placeholder="Untitled" hidden />
       <div class="seg" id="seg" hidden>
         <button data-seg="outline">Plan</button>
@@ -349,10 +349,11 @@
       <aside class="context" id="context">
         <div class="ctxcard">
           <div class="ctxhead">
-          <h3>Interview / Prompts</h3>
+          <div><span class="eyebrow">Story compass</span><h3>Shape the whole idea</h3></div>
           <button class="chipbtn" id="speakQBtn" title="Read the question aloud" hidden>🔊 Read</button>
           <button class="chipbtn" id="resumeBtn">▤ Resume</button>
         </div>
+          <div class="story-compass" id="storyCompass" aria-label="Interview coverage"></div>
           <div class="transcript" id="transcript"></div>
 
           <div class="answerbox" id="answerBox" hidden>
@@ -369,7 +370,7 @@
           </div>
 
           <div class="suggestq" id="suggestQ" hidden>
-            <div class="sq-label">Suggested next question</div>
+            <div class="sq-label"><span id="sqFocus">Next dimension</span><span>Suggested question</span></div>
             <div class="sq-card">
               <div class="sq-text" id="sqText"></div>
               <div class="sq-actions">
@@ -455,6 +456,17 @@
     </div>
 
     <div class="modal-body">
+      <section class="setsec appearance-settings">
+        <h3>Studio theme</h3>
+        <p class="sethint">Choose the atmosphere you want around the page. Your manuscript stays exactly the same.</p>
+        <div class="theme-grid" id="themeGrid">
+          <button type="button" class="theme-card" data-theme-choice="inkwell"><span class="theme-preview theme-preview-inkwell"><i></i><i></i><i></i></span><b>Inkwell</b><small>Charcoal, oxblood &amp; brass</small></button>
+          <button type="button" class="theme-card" data-theme-choice="parchment"><span class="theme-preview theme-preview-parchment"><i></i><i></i><i></i></span><b>Parchment</b><small>Warm paper &amp; walnut</small></button>
+          <button type="button" class="theme-card" data-theme-choice="midnight"><span class="theme-preview theme-preview-midnight"><i></i><i></i><i></i></span><b>Midnight</b><small>Navy, silver &amp; blue</small></button>
+          <button type="button" class="theme-card" data-theme-choice="verdigris"><span class="theme-preview theme-preview-verdigris"><i></i><i></i><i></i></span><b>Verdigris</b><small>Forest, copper &amp; sage</small></button>
+        </div>
+      </section>
+
       <section class="setsec">
         <h3>Model &amp; generation</h3>
         <p class="sethint">How the model behaves when it writes. Higher temperature is more inventive and less predictable.</p>
