@@ -229,6 +229,7 @@ async function loadSettings() {
 function applySettings() {
   const e = state.settings?.editor;
   if (!e) return;
+  document.documentElement.dataset.theme = state.settings?.appearance?.theme || 'inkwell';
   const r = document.documentElement.style;
   r.setProperty('--ed-size', e.fontSize + 'px');
   r.setProperty('--ed-lh', e.lineHeight);
@@ -260,11 +261,21 @@ function openSettings() {
   $('set-autosummary').checked = s.context.autoSummary;
   $('set-spell').checked = s.editor.spellcheck;
   $('set-model').value = s.defaultModel || state.model;
+  renderThemePicker(s.appearance?.theme || 'inkwell');
   renderCloudSettings();
   renderVoiceSettings();
   renderImageSettings();
   renderConn();
   $('settingsModal').hidden = false;
+}
+
+function closeSettings() {
+  document.documentElement.dataset.theme = state.settings?.appearance?.theme || 'inkwell';
+  $('settingsModal').hidden = true;
+}
+
+function renderThemePicker(theme) {
+  els('[data-theme-choice]').forEach((card) => card.classList.toggle('on', card.dataset.themeChoice === theme));
 }
 
 // ---------- illustration backends ----------
@@ -563,6 +574,7 @@ async function renderCloudSettings() {
 
 function collectSettings() {
   const s = JSON.parse(JSON.stringify(state.settings));
+  s.appearance = { theme: document.querySelector('[data-theme-choice].on')?.dataset.themeChoice || 'inkwell' };
   for (const [input, , group, key] of SET_FIELDS) s[group][key] = +$(input).value;
   s.context.includeBible = $('set-bible').checked;
   s.context.includeSummary = $('set-summary').checked;
@@ -1101,6 +1113,7 @@ function renderContext() {
   if (!state.book) return;
   const plan = state.book.plan || { messages: [], suggested: null };
   const msgs = plan.messages || [];
+  renderStoryCompass(msgs, plan.suggested);
 
   $('transcript').innerHTML = msgs.length
     ? msgs.map((m) => `<div class="bub ${m.role === 'user' ? 'me' : 'ai'}">${esc(m.content)}</div>`).join('')
@@ -1119,13 +1132,31 @@ function renderContext() {
   }
   if (pending) renderMicState();
   $('suggestQ').hidden = pending || !plan.suggested?.question;
-  if (plan.suggested?.question) $('sqText').textContent = plan.suggested.question;
+  if (plan.suggested?.question) {
+    $('sqText').textContent = plan.suggested.question;
+    $('sqFocus').textContent = plan.suggested.probing || 'Next dimension';
+  }
   const showStart = !pending && !plan.suggested?.question;
   $('startInterviewBtn').hidden = !showStart;
   $('startInterviewBtn').textContent = msgs.length ? 'Ask another question' : 'Start the interview';
 
   renderMemory();
   renderBiblePeek();
+}
+
+const STORY_DIMENSIONS = ['character', 'relationships', 'conflict', 'world', 'structure', 'meaning', 'voice'];
+function storyDimension(label = '') {
+  const value = label.toLowerCase();
+  return STORY_DIMENSIONS.find((d) => value.includes(d)) || '';
+}
+
+function renderStoryCompass(messages, suggested) {
+  const covered = new Set(messages.filter((m) => m.role === 'assistant').map((m) => storyDimension(m.probing)).filter(Boolean));
+  const next = storyDimension(suggested?.probing);
+  $('storyCompass').innerHTML = STORY_DIMENSIONS.map((dimension) => {
+    const stateName = covered.has(dimension) ? 'covered' : next === dimension ? 'next' : '';
+    return `<span class="compass-point ${stateName}" title="${covered.has(dimension) ? 'Explored' : next === dimension ? 'Up next' : 'Still open'}">${dimension}</span>`;
+  }).join('');
 }
 
 function renderMemory() {
@@ -1210,9 +1241,10 @@ function ensureModel(errEl, retry) {
 }
 
 async function askThis() {
-  const q = state.book.plan.suggested?.question;
+  const suggestion = state.book.plan.suggested;
+  const q = suggestion?.question;
   if (!q) return;
-  state.book.plan.messages.push({ role: 'assistant', content: q });
+  state.book.plan.messages.push({ role: 'assistant', content: q, probing: storyDimension(suggestion.probing) || suggestion.probing || '' });
   state.book.plan.suggested = null;
   await savePlan();
   renderContext();
@@ -2231,7 +2263,13 @@ function wire() {
   $('modelSelect').onchange = (e) => { state.model = e.target.value; localStorage.setItem('inkwell.model', state.model); };
   // settings
   $('settingsBtn').onclick = openSettings;
-  $('setClose').onclick = $('setCancel').onclick = () => ($('settingsModal').hidden = true);
+  $('themeGrid').onclick = (e) => {
+    const card = e.target.closest('[data-theme-choice]');
+    if (!card) return;
+    renderThemePicker(card.dataset.themeChoice);
+    document.documentElement.dataset.theme = card.dataset.themeChoice;
+  };
+  $('setClose').onclick = $('setCancel').onclick = closeSettings;
   $('setSave').onclick = saveSettings;
   $('setReset').onclick = resetSettings;
   $('set-refresh').onclick = async () => { await refreshProvider(); renderConn(); toast('Models refreshed.'); };
@@ -2282,7 +2320,7 @@ function wire() {
     renderEngine({ refresh: false });
     toast('Removed.', 'ok');
   };
-  $('settingsModal').onclick = (e) => { if (e.target.id === 'settingsModal') $('settingsModal').hidden = true; };
+  $('settingsModal').onclick = (e) => { if (e.target.id === 'settingsModal') closeSettings(); };
   // live-preview every slider as it moves
   for (const [input, output, group, key, fmt] of SET_FIELDS) {
     $(input).addEventListener('input', (e) => {
@@ -2298,7 +2336,7 @@ function wire() {
   $('set-spell').addEventListener('change', (e) => ($('editor').spellcheck = e.target.checked));
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (!$('settingsModal').hidden) $('settingsModal').hidden = true;
+    if (!$('settingsModal').hidden) closeSettings();
     if (!$('refineModal').hidden) closeRefine();
   });
 
