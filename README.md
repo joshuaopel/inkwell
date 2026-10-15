@@ -160,6 +160,29 @@ npm start
 Then open **http://localhost:4321**. Pick your model in the top-right, create a book,
 and start in Plan mode.
 
+## Validate the AI pipeline
+
+Inkwell tests the request at the model boundary instead of judging only whether an
+answer sounds plausible:
+
+```bash
+npm test
+```
+
+The suite checks prompt contracts directly and starts a protocol-compatible stand-in
+Ollama server that captures Inkwell's real HTTP requests. It verifies that the full
+interview transcript, breadth-first story dimensions, book tone, running summary,
+chapter plan and local prose actually reach the model. It also tests the return path,
+including one bounded repair when a model asks another question in the same dimension
+while major dimensions remain open.
+
+The deterministic suite proves wiring and contracts. Real-model scenario checks are a
+separate quality layer: they ask whether the questions are insightful and the prose is
+effective after the correct assignment has been delivered.
+
+For the product and experimentation story behind this approach, see
+[`docs/speero-circus-2026-talk-guide.md`](docs/speero-circus-2026-talk-guide.md).
+
 ## Reading & writing from your phone
 
 Inkwell listens on every network interface, so once it's running on your desktop it's
