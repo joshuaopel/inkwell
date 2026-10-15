@@ -8,7 +8,7 @@ import os from 'node:os';
 import { providerFor, cloudProvider, cloudConfigured, ollama, ollamaDiagnose, OLLAMA_HOST, CLOUD_SERVICES, CLOUD_PREFIX } from './lib/ollama.js';
 import * as store from './lib/store.js';
 import { systemPrompt, buildWriteMessages } from './lib/context.js';
-import { interviewMessages, outlineMessages, bibleSeedMessages, summaryMessages, nextQuestionMessages, refineOutlineMessages, designMessages, spreadPlanMessages, visualBibleMessages, illustrationMessages } from './lib/prompts.js';
+import { interviewMessages, outlineMessages, bibleSeedMessages, summaryMessages, nextQuestionMessages, validateInterviewSuggestion, refineOutlineMessages, designMessages, spreadPlanMessages, visualBibleMessages, illustrationMessages } from './lib/prompts.js';
 import { buildEpub } from './lib/epub.js';
 import { catalog, presetDesign, normalizeDesign, findTrim, findFont, ENUMS } from './lib/design.js';
 import { kindList, kindOf, isPicture, targets } from './lib/kinds.js';
@@ -401,12 +401,33 @@ app.post('/api/plan/interview', asyncH(async (req, res) => {
 // One question at a time, aware of everything already said.
 app.post('/api/plan/next-question', asyncH(async (req, res) => {
   const { model, premise, genre, pov, tense, transcript, kind } = req.body || {};
-  const text = await (await P(model)).chatOnce({
-    model, format: 'json', options: await planOptions(),
-    messages: nextQuestionMessages({ premise, genre, pov, tense, transcript, kind: kindOf({ kind }) }),
-  });
-  const data = parseJsonLoose(text) || {};
-  res.json({ question: data.question || '', probing: data.probing || '' });
+  const provider = await P(model);
+  const options = await planOptions();
+  const messages = nextQuestionMessages({ premise, genre, pov, tense, transcript, kind: kindOf({ kind }) });
+  let text = await provider.chatOnce({ model, format: 'json', options, messages });
+  let result = validateInterviewSuggestion(parseJsonLoose(text) || {}, transcript);
+
+  // Local models sometimes understand the story but ignore the coverage rule.
+  // Give one explicit, bounded repair turn before surfacing the failure.
+  if (!result.ok) {
+    const repairMessages = [
+      ...messages,
+      { role: 'assistant', content: text || '{}' },
+      {
+        role: 'user',
+        content: `That response violates the interview contract: ${result.reason}\nChoose a different open dimension and return ONLY corrected JSON: {"question":"...","probing":"..."}`,
+      },
+    ];
+    text = await provider.chatOnce({ model, format: 'json', options, messages: repairMessages });
+    result = validateInterviewSuggestion(parseJsonLoose(text) || {}, transcript);
+  }
+
+  if (!result.ok) {
+    return res.status(502).json({
+      error: `The model returned an invalid interview question after one repair attempt. ${result.reason} Try again, or choose a more capable model.`,
+    });
+  }
+  res.json({ question: result.question, probing: result.probing });
 }));
 
 app.post('/api/plan/outline', asyncH(async (req, res) => {
