@@ -96,7 +96,7 @@ No real model is required, so the result is deterministic and inexpensive.
 
 ### 3. Result-contract validation and repair
 
-Inkwell normalizes the interview dimension to the seven supported labels. It also checks whether the model repeated the immediately previous dimension while other dimensions remain open. If the answer violates either rule, Inkwell sends one focused repair request explaining the exact contract failure. If the second response still fails, the API rejects it instead of quietly presenting unverifiable output as success.
+Inkwell normalizes the interview dimension to the seven supported labels. It also checks whether the model revisited any covered dimension while other dimensions remain open. If the answer violates either rule, Inkwell sends one focused repair request explaining the exact contract failure. If the second response still fails, the API rejects it instead of quietly presenting unverifiable output as success.
 
 This safeguard came from a real release check with `gemma4:12b`: the model asked a specific, intelligent question about the royal surveyor, but it pursued conflict immediately after a conflict question. The result sounded good and was wrong for the breadth-first interview. That failure became a test and a bounded repair path.
 

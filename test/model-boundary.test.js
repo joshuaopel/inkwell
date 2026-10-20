@@ -113,7 +113,7 @@ test('captured provider requests prove the interview and writing context cross t
   assert.match(interviewRequest.messages[1].content, /Prefer an uncovered or thin dimension/);
   const repairRequest = captured[1];
   assert.match(repairRequest.messages.at(-1).content, /violates the interview contract/);
-  assert.match(repairRequest.messages.at(-1).content, /repeated "character"/);
+  assert.match(repairRequest.messages.at(-1).content, /revisited "character"/);
 
   const write = await fetch(`${base}/api/write`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

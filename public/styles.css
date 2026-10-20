@@ -857,12 +857,14 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--v
 .ctxcard:first-child { border-color:var(--active-line); background:linear-gradient(155deg,var(--card),var(--panel)); }
 .eyebrow { display:block; color:var(--gold); font-size:9px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; margin-bottom:3px; }
 
-.story-compass { display:flex; flex-wrap:wrap; gap:5px; margin:-1px 0 12px; padding-bottom:11px; border-bottom:1px solid var(--line-soft); }
+.story-compass { display:flex; flex-wrap:wrap; gap:5px; margin:-1px 0 7px; }
 .compass-point { border:1px solid var(--line); border-radius:999px; color:var(--ink-faint); padding:3px 7px; font-size:9px; letter-spacing:.04em; text-transform:capitalize; }
 .compass-point.covered { color:var(--ink-dim); border-color:var(--active-line); background:var(--wash); }
 .compass-point.covered::before { content:"✓ "; color:var(--gold); }
 .compass-point.next { color:var(--gold); border-color:var(--gold); box-shadow:0 0 0 2px var(--wash); }
 .compass-point.next::before { content:"◆ "; font-size:7px; }
+.compass-status { margin:0 0 12px; padding:0 0 10px; border-bottom:1px solid var(--line-soft); color:var(--ink-faint); font-size:10px; line-height:1.45; }
+.compass-status b { color:var(--ink-dim); font-weight:600; }
 .sq-label { display:flex; align-items:center; justify-content:space-between; gap:8px; }
 #sqFocus { color:var(--gold); border:1px solid var(--active-line); border-radius:999px; padding:2px 6px; }
 .sq-card { background:var(--wash); border-color:var(--active-line); box-shadow:inset 3px 0 var(--gold); }
