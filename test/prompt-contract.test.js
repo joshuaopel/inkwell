@@ -41,7 +41,7 @@ test('interview dimension labels are normalized to the product contract', () => 
   assert.equal(normalizeInterviewDimension('plot mechanics'), '');
 });
 
-test('a fluent question is still rejected when it repeats the last dimension', () => {
+test('a fluent question is still rejected when it revisits a covered dimension', () => {
   const transcript = [
     { role: 'assistant', content: 'What blocks Mara?', probing: 'conflict' },
     { role: 'user', content: 'The royal surveyor.' },
@@ -50,12 +50,23 @@ test('a fluent question is still rejected when it repeats the last dimension', (
     question: 'How does the royal surveyor threaten Mara?', probing: 'conflict',
   }, transcript);
   assert.equal(repeated.ok, false);
-  assert.match(repeated.reason, /repeated "conflict"/);
+  assert.match(repeated.reason, /revisited "conflict"/);
 
   const lateral = validateInterviewSuggestion({
     question: 'Who still remembers the coast with Mara?', probing: 'relationships',
   }, transcript);
   assert.equal(lateral.ok, true);
+
+  const nonConsecutive = validateInterviewSuggestion({
+    question: 'What does Mara want now?', probing: 'character',
+  }, [
+    { role: 'assistant', content: 'What does Mara want?', probing: 'character' },
+    { role: 'user', content: 'Restore her family name.' },
+    { role: 'assistant', content: 'Who remembers with her?', probing: 'relationships' },
+    { role: 'user', content: 'Her brother.' },
+  ]);
+  assert.equal(nonConsecutive.ok, false);
+  assert.match(nonConsecutive.reason, /revisited "character"/);
 });
 
 test('writing context contains tone, story memory, chapter obligations, and local prose', () => {

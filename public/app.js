@@ -1157,6 +1157,12 @@ function renderStoryCompass(messages, suggested) {
     const stateName = covered.has(dimension) ? 'covered' : next === dimension ? 'next' : '';
     return `<span class="compass-point ${stateName}" title="${covered.has(dimension) ? 'Explored' : next === dimension ? 'Up next' : 'Still open'}">${dimension}</span>`;
   }).join('');
+  const count = covered.size;
+  $('storyCompassStatus').innerHTML = count === STORY_DIMENSIONS.length
+    ? '<b>Broad foundation covered.</b> Build when you are ready, or keep asking for depth.'
+    : count >= 5
+      ? `<b>${count} of ${STORY_DIMENSIONS.length} dimensions explored.</b> Enough breadth to build; keep going if the remaining areas matter.`
+      : `<b>${count} of ${STORY_DIMENSIONS.length} dimensions explored.</b> Inkwell will move across the open areas before going deeper.`;
 }
 
 function renderMemory() {
