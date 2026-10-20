@@ -180,9 +180,6 @@ The deterministic suite proves wiring and contracts. Real-model scenario checks 
 separate quality layer: they ask whether the questions are insightful and the prose is
 effective after the correct assignment has been delivered.
 
-For the product and experimentation story behind this approach, see
-[`docs/speero-circus-2026-talk-guide.md`](docs/speero-circus-2026-talk-guide.md).
-
 ## Reading & writing from your phone
 
 Inkwell listens on every network interface, so once it's running on your desktop it's
