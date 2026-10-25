@@ -70,6 +70,7 @@ async function planOptions() {
   return {
     num_ctx: Math.max(s.generation?.num_ctx || 0, 16384),
     num_predict: 4096,
+    think: false, // structured JSON answers; hidden reasoning only adds wait
     temperature: 0.5,
     top_p: s.generation?.top_p ?? 0.9,
   };
@@ -468,7 +469,7 @@ app.post('/api/write', asyncH(async (req, res) => {
   const { model, meta, bible, chapter, priorText, followingText, selection, instruction, action, notes, previousAttempt } = req.body || {};
   // Generation + context knobs come from settings.json unless the client overrides.
   const settings = await store.getSettings();
-  const options = { ...settings.generation, ...(req.body.options || {}) };
+  const options = { think: false, ...settings.generation, ...(req.body.options || {}) };
   const ctx = { ...settings.context, ...(req.body.ctx || {}) };
   const messages = [
     { role: 'system', content: systemPrompt(meta, bible || {}) },
